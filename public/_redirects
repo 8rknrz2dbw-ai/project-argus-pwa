@@ -1,0 +1,3 @@
+# Cloudflare Pages / Netlify SPA fallback.
+# 靜態檔（sw.js、assets/*）會優先直接送出；其餘路徑退回 index.html。
+/*    /index.html   200
