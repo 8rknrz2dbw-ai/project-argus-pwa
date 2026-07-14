@@ -1,5 +1,5 @@
 import { useTacticalStore } from '../store/tacticalStore'
-import { bearingToText } from '../lib/drift'
+import { bearingToText, DRIFT_TARGETS } from '../lib/drift'
 import { buildReport, shareReport } from '../lib/report'
 
 /**
@@ -13,6 +13,8 @@ export function RescueControls() {
   const own = useTacticalStore((s) => s.ownPosition)
   const scrubHours = useTacticalStore((s) => s.scrubHours)
   const setScrubHours = useTacticalStore((s) => s.setScrubHours)
+  const driftTargetId = useTacticalStore((s) => s.driftTargetId)
+  const setDriftTarget = useTacticalStore((s) => s.setDriftTarget)
   const setMob = useTacticalStore((s) => s.setManOverboard)
   const setResult = useTacticalStore((s) => s.setRescueResult)
   const setStatus = useTacticalStore((s) => s.setStatus)
@@ -43,6 +45,31 @@ export function RescueControls() {
           預判漂流方向與搜索範圍。
         </p>
       )}
+
+      {/* 漂流物體類型（不同風壓係數）*/}
+      <div>
+        <div className="mb-1 text-[11px] font-semibold text-slate-400">漂流物體類型</div>
+        <div className="grid grid-cols-4 gap-1">
+          {DRIFT_TARGETS.map((t) => {
+            const active = driftTargetId === t.id
+            return (
+              <button
+                key={t.id}
+                onClick={() => setDriftTarget(t.id, t.leeway)}
+                className={[
+                  'flex flex-col items-center rounded border py-1.5 text-[10px] transition-all active:scale-95',
+                  active
+                    ? 'border-tactical-alert bg-tactical-alert/15 text-tactical-alert'
+                    : 'border-slate-700 bg-slate-900/60 text-slate-400',
+                ].join(' ')}
+              >
+                <span className="text-base">{t.icon}</span>
+                {t.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
       {/* 海象摘要 */}
       {env && (

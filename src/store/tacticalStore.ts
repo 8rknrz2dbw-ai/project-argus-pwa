@@ -39,6 +39,10 @@ interface TacticalState {
   rescueStatus: 'idle' | 'loading' | 'done'
   /** 時間軸拉桿的小時數（0 = 不顯示 scrubber）。 */
   scrubHours: number
+  /** 漂流物體類型的風壓係數 (leeway)。 */
+  driftLeeway: number
+  /** 目前選的漂流物體類型 id。 */
+  driftTargetId: string
 
   // ── AIS 船舶識別 (ais) ──────────────────────────────
   vessels: Vessel[]
@@ -64,6 +68,8 @@ interface TacticalState {
   setVessels: (v: Vessel[]) => void
   setOwnPosition: (p: TacticalState['ownPosition']) => void
   setScrubHours: (h: number) => void
+  setDriftTarget: (id: string, leeway: number) => void
+  setDriftPoints: (points: DriftPoint[]) => void
 }
 
 const today = new Date().toISOString().slice(0, 10)
@@ -82,6 +88,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   driftPoints: [],
   rescueStatus: 'idle',
   scrubHours: 0,
+  driftLeeway: 0.014,
+  driftTargetId: 'piw',
   vessels: [],
   ownPosition: null,
   statusMessage: '軌道預警模式待命中',
@@ -101,6 +109,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
       driftPoints: [],
       rescueStatus: 'idle',
       scrubHours: 0,
+      driftLeeway: 0.014,
+      driftTargetId: 'piw',
       vessels: [],
       statusMessage: MODE_HINT[mode],
     })),
@@ -118,6 +128,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setVessels: (v) => set({ vessels: v }),
   setOwnPosition: (p) => set({ ownPosition: p }),
   setScrubHours: (h) => set({ scrubHours: h }),
+  setDriftTarget: (id, leeway) => set({ driftTargetId: id, driftLeeway: leeway }),
+  setDriftPoints: (points) => set({ driftPoints: points }),
 }))
 
 const MODE_HINT: Record<TacticalMode, string> = {

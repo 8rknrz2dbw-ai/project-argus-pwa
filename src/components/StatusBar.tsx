@@ -21,7 +21,7 @@ export function StatusBar() {
           <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-tactical-green" />
         </span>
         <span className="font-mono text-xs font-bold tracking-widest text-tactical-green">
-          ARGUS · {MODE_LABEL[mode]}
+          阿爾戈斯 · {MODE_LABEL[mode]}
         </span>
       </div>
       <span className="truncate font-mono text-[11px] text-slate-300">{statusMessage}</span>

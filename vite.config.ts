@@ -10,9 +10,10 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'Project Argus - 海巡戰術面板',
-        short_name: 'Argus',
-        description: 'Tactical Earth Observation & Edge AI',
+        name: '阿爾戈斯 · 海巡戰術面板',
+        short_name: '阿爾戈斯',
+        description: '阿爾戈斯 Argus — 海巡戰術觀測與搜救 PWA',
+        lang: 'zh-Hant',
         theme_color: '#0f172a',
         background_color: '#0f172a',
         display: 'standalone',

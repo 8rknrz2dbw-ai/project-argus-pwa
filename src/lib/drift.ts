@@ -98,6 +98,24 @@ export function predictDrift(input: DriftInput): DriftPoint[] {
   })
 }
 
+/**
+ * 漂流物體類型與其風壓漂移係數 (leeway)。不同物體受風影響差很多：
+ * 救生筏有帆布受風大、落海人幾乎沒入水中受風小。數值為近似 SAR 經驗值。
+ */
+export interface DriftTarget {
+  id: string
+  label: string
+  leeway: number
+  icon: string
+}
+
+export const DRIFT_TARGETS: DriftTarget[] = [
+  { id: 'piw', label: '落海人', leeway: 0.014, icon: '🏊' },
+  { id: 'lifejacket', label: '救生衣浮者', leeway: 0.02, icon: '🦺' },
+  { id: 'liferaft', label: '救生筏', leeway: 0.03, icon: '🛟' },
+  { id: 'boat', label: '小船/膠筏', leeway: 0.05, icon: '🚤' },
+]
+
 /** 把方向度數轉成 8 方位中文，給 UI 顯示用。 */
 export function bearingToText(deg: number): string {
   const dirs = ['北', '東北', '東', '東南', '南', '西南', '西', '西北']

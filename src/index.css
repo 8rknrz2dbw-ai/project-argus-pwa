@@ -56,6 +56,10 @@ body,
   text-align: center;
   text-shadow: 0 0 4px currentColor;
 }
+/* 異常船隻脈動（注意：旋轉在 inline transform，這裡只改透明度） */
+.ais-vessel.ais-alert {
+  animation: pulse-alert 0.8s ease-in-out infinite;
+}
 
 /* 落海點標記（紅色脈動十字） */
 .mob-marker {

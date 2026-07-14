@@ -21,6 +21,8 @@ export function RescueLayer({ map }: { map: L.Map }) {
   const manOverboard = useTacticalStore((s) => s.manOverboard)
   const rescueEnv = useTacticalStore((s) => s.rescueEnv)
   const scrubHours = useTacticalStore((s) => s.scrubHours)
+  const driftLeeway = useTacticalStore((s) => s.driftLeeway)
+  const setDriftPoints = useTacticalStore((s) => s.setDriftPoints)
 
   const fieldRef = useRef<L.LayerGroup | null>(null) // 風/流箭頭
   const driftRef = useRef<L.LayerGroup | null>(null) // 落海點 + 漂流
@@ -53,26 +55,10 @@ export function RescueLayer({ map }: { map: L.Map }) {
       const { lat, lng } = e.latlng
       setManOverboard({ lat, lng })
       setRescueStatus('loading')
-      setStatus('已標記落海點，計算漂流中…')
-      drift.clearLayers()
-      drawManOverboard(drift, lat, lng)
-
+      setStatus('已標記落海點，讀取海象中…')
+      // 只抓海象並存起來；漂流計算與繪製交給下方 effect（依物體類型 leeway）。
       const env = await fetchEnvAt(lat, lng)
-      const points = predictDrift({
-        lat,
-        lng,
-        wind: { speed: env.windSpeed, dirDeg: env.windDir },
-        current: { speed: env.currentSpeed, dirDeg: env.currentDir },
-        hoursList: [1, 3, 6],
-      })
-      if (!driftRef.current) return
-      drawDrift(drift, lat, lng, points)
-      setRescueResult(env, points)
-      setRescueStatus('done')
-      const last = points[points.length - 1]
-      setStatus(
-        `漂流預判：6h 後約在 ${bearingToText(last.bearingDeg)}方 ${(last.driftMeters / 1852).toFixed(1)} 浬，搜索半徑 ${(last.radiusMeters / 1852).toFixed(1)} 浬`,
-      )
+      setRescueResult(env, [])
     }
 
     map.on('moveend', onMoveEnd)
@@ -97,6 +83,36 @@ export function RescueLayer({ map }: { map: L.Map }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
+
+  // ── 漂流計算：落海點 / 海象 / 物體類型(leeway) 任一改變就重算重畫 ──
+  useEffect(() => {
+    if (mode !== 'rescue') return
+    const drift = driftRef.current
+    if (!drift) return
+    drift.clearLayers()
+    if (!manOverboard) {
+      setDriftPoints([])
+      return
+    }
+    drawManOverboard(drift, manOverboard.lat, manOverboard.lng)
+    if (!rescueEnv) return
+    const points = predictDrift({
+      lat: manOverboard.lat,
+      lng: manOverboard.lng,
+      wind: { speed: rescueEnv.windSpeed, dirDeg: rescueEnv.windDir },
+      current: { speed: rescueEnv.currentSpeed, dirDeg: rescueEnv.currentDir },
+      leewayFactor: driftLeeway,
+      hoursList: [1, 3, 6],
+    })
+    drawDrift(drift, manOverboard.lat, manOverboard.lng, points)
+    setDriftPoints(points)
+    setRescueStatus('done')
+    const last = points[points.length - 1]
+    setStatus(
+      `漂流預判：6h 後約在 ${bearingToText(last.bearingDeg)}方 ${(last.driftMeters / 1852).toFixed(1)} 浬，搜索半徑 ${(last.radiusMeters / 1852).toFixed(1)} 浬`,
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, manOverboard, rescueEnv, driftLeeway])
 
   // ── 時間軸 scrubber：拉桿到任意小時，畫出該時刻的漂流位置 ──
   useEffect(() => {
