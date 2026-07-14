@@ -4,6 +4,8 @@ const MODE_LABEL: Record<string, string> = {
   orbit: 'ORBIT',
   sar: 'SAR',
   optical: 'OPTICAL',
+  ais: 'AIS',
+  rescue: 'RESCUE',
 }
 
 /** 頂部狀態列：模式指示 + 即時訊息（給海上人員的單行回饋）。 */

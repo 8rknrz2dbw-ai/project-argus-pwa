@@ -2,6 +2,8 @@ import { useTacticalStore } from '../store/tacticalStore'
 import { ModeButtons } from './ModeButtons'
 import { OpticalControls } from './OpticalControls'
 import { SarControls } from './SarControls'
+import { AisControls } from './AisControls'
+import { RescueControls } from './RescueControls'
 
 /**
  * Dashboard —— 底部（手機）/ 左側（平板以上）的控制面板。
@@ -16,8 +18,10 @@ export function Dashboard() {
         {/* 模式專屬控制項（在按鈕上方浮現）*/}
         {mode === 'optical' && <OpticalControls />}
         {mode === 'sar' && <SarControls />}
+        {mode === 'ais' && <AisControls />}
+        {mode === 'rescue' && <RescueControls />}
 
-        {/* 三大戰術模式按鈕 */}
+        {/* 戰術模式按鈕 */}
         <ModeButtons />
       </div>
     </div>

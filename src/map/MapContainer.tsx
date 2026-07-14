@@ -3,6 +3,8 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { LayerControl } from './LayerControl'
 import { BBoxSelector } from './BBoxSelector'
+import { AisLayer } from './AisLayer'
+import { RescueLayer } from './RescueLayer'
 
 /**
  * MapContainer —— 唯一的地圖實體。
@@ -51,6 +53,8 @@ export function MapContainer() {
       <div className="radar-vignette" />
       {map && <LayerControl map={map} />}
       {map && <BBoxSelector map={map} />}
+      {map && <AisLayer map={map} />}
+      {map && <RescueLayer map={map} />}
     </div>
   )
 }

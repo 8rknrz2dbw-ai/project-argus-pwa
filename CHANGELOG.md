@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.3.0-beta.1 — Maritime SAR & Environment
+
+### 新增
+- 🆘 **搜救推演模式 (Rescue)**：落海漂流預判。點地圖標記落海點，系統用
+  風場＋洋流以 leeway 模型算出 1/3/6 小時後的漂流位置與搜索半徑（浬），
+  畫出漂流軌跡與擴大的搜索圈。含 15 項數學單元測試。
+- 🌬️ **風場箭頭** 與 🌊 **洋流箭頭**：整個視野的向量場（Open-Meteo 免金鑰）。
+- 📡 **AIS 船舶識別模式**：即時船位（依航向旋轉），點擊看船名/MMSI/航速/船種；
+  無船名/不明船隻紅色標示。預設模擬船隻，設 `VITE_AISSTREAM_KEY` 接真實 AIS。
+- 海象摘要面板：即時風速風向、洋流速向、浪高。
+- 底部模式列擴充為 5 種，手機可橫向滑動切換。
+
+### 資料源
+- 風/流/浪：Open-Meteo（免金鑰、免費、CORS 直連），含離線 fallback。
+- AIS：aisstream.io WebSocket（免費金鑰）／內建模擬。
+
+### 防爆
+- AIS 離開模式即取消訂閱（關 WebSocket／清 interval）。
+- 搜救圖層卸載即清除箭頭場與漂流圖層，moveend 抓資料有 debounce。
+
 ## v1.2.0-beta.1 — Tactical Earth Observation & Edge AI
 
 ### 新增

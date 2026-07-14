@@ -49,6 +49,35 @@ body,
   height: 1px;
 }
 
+/* AIS 船舶三角形（依航向旋轉） */
+.ais-vessel {
+  font-size: 18px;
+  line-height: 22px;
+  text-align: center;
+  text-shadow: 0 0 4px currentColor;
+}
+
+/* 落海點標記（紅色脈動十字） */
+.mob-marker {
+  font-size: 26px;
+  line-height: 30px;
+  text-align: center;
+  color: #f43f5e;
+  text-shadow: 0 0 8px #f43f5e;
+  animation: pulse-alert 1s ease-in-out infinite;
+}
+
+/* 漂流時間標籤 */
+.drift-label {
+  font: 700 11px ui-monospace, monospace;
+  color: #fecdd3;
+  background: rgba(159, 18, 57, 0.85);
+  border: 1px solid #f43f5e;
+  border-radius: 9px;
+  text-align: center;
+  line-height: 16px;
+}
+
 /* AI 偵測框（疑似船隻） */
 .detection-box {
   width: 22px;
