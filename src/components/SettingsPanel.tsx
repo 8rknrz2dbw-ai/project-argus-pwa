@@ -26,7 +26,7 @@ export function SettingsPanel() {
           setCfg(getConfig())
           setOpen(true)
         }}
-        className="pointer-events-auto absolute right-3 top-12 z-[1100] flex h-10 w-10 items-center justify-center rounded-full border border-slate-600 bg-tactical-panel/90 text-lg active:scale-95"
+        className="safe-float-top pointer-events-auto absolute z-[1100] flex h-11 w-11 items-center justify-center rounded-full border border-slate-600 bg-tactical-panel/90 text-lg active:scale-95"
         aria-label="設定"
       >
         ⚙️

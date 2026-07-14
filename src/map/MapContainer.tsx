@@ -6,6 +6,7 @@ import { BBoxSelector } from './BBoxSelector'
 import { AisLayer } from './AisLayer'
 import { RescueLayer } from './RescueLayer'
 import { LocateControl } from './LocateControl'
+import { OfflineControl } from './OfflineControl'
 
 /**
  * MapContainer —— 唯一的地圖實體。
@@ -30,15 +31,15 @@ export function MapContainer() {
 
     // Base Layer：CARTO dark_matter 真・深色底圖（軍事雷達幕質感）。
     // 直接用專業深色圖磚，不再用 CSS invert 濾鏡（會把 OSM 洗成灰白）。
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // 固定 subdomain 'a' 且非 retina，讓離線下載的 URL 與顯示用完全一致（才會命中快取）。
+    L.tileLayer('https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      subdomains: 'abcd',
-      detectRetina: true,
+      detectRetina: false,
       className: 'base-tiles-tactical',
       attribution: '&copy; OpenStreetMap &copy; CARTO',
     }).addTo(m)
 
-    L.control.zoom({ position: 'topright' }).addTo(m)
+    // 手機以雙指縮放為主，移除佔版面的縮放按鈕；保留比例尺。
     L.control.scale({ imperial: false, position: 'bottomright' }).addTo(m)
 
     setMap(m)
@@ -57,6 +58,7 @@ export function MapContainer() {
       {map && <AisLayer map={map} />}
       {map && <RescueLayer map={map} />}
       {map && <LocateControl map={map} />}
+      {map && <OfflineControl map={map} />}
     </div>
   )
 }

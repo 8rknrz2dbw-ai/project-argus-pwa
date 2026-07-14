@@ -14,8 +14,8 @@ export function StatusBar() {
   const statusMessage = useTacticalStore((s) => s.statusMessage)
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-[1000] flex items-center gap-3 bg-gradient-to-b from-slate-900/95 to-transparent px-4 py-2">
-      <div className="flex items-center gap-2">
+    <div className="safe-top pointer-events-none absolute inset-x-0 top-0 z-[1000] flex items-center gap-3 bg-gradient-to-b from-slate-900/95 to-transparent px-4 py-2">
+      <div className="flex shrink-0 items-center gap-2">
         <span className="relative flex h-2.5 w-2.5">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-tactical-green opacity-60" />
           <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-tactical-green" />

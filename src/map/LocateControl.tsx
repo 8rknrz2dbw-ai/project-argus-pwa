@@ -62,7 +62,7 @@ export function LocateControl({ map }: { map: L.Map }) {
   return (
     <button
       onClick={locate}
-      className="pointer-events-auto absolute bottom-32 right-3 z-[1100] flex h-11 w-11 items-center justify-center rounded-full border border-slate-600 bg-tactical-panel/90 text-xl active:scale-95 md:bottom-20"
+      className="safe-float-top2 pointer-events-auto absolute z-[1100] flex h-11 w-11 items-center justify-center rounded-full border border-slate-600 bg-tactical-panel/90 text-xl active:scale-95"
       aria-label="我的位置"
     >
       {busy ? '⏳' : '📍'}
