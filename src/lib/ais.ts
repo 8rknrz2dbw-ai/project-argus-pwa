@@ -19,8 +19,9 @@ export interface Vessel {
   type: string
 }
 
-const AIS_KEY = import.meta.env.VITE_AISSTREAM_KEY as string | undefined
-export const aisConfigured = Boolean(AIS_KEY)
+import { getConfig, isAisConfigured } from './config'
+
+export { isAisConfigured }
 
 type Listener = (vessels: Vessel[]) => void
 
@@ -38,7 +39,8 @@ const DEG = Math.PI / 180
 
 /** 訂閱 AIS。回傳取消訂閱函式。 */
 export function subscribeAIS(onUpdate: Listener): () => void {
-  if (AIS_KEY) return subscribeReal(onUpdate, AIS_KEY)
+  const key = getConfig().aisKey
+  if (key) return subscribeReal(onUpdate, key)
   return subscribeSim(onUpdate)
 }
 

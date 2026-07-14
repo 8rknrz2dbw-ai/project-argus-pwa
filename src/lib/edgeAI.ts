@@ -6,22 +6,22 @@
 // 若未設定 VITE_EDGE_AI_URL，會 fallback 到本機 mock，方便先驗證 UI 流程。
 
 import type { BBox, DetectionCollection } from '../types'
+import { getConfig, isEdgeAiConfigured } from './config'
 
-const EDGE_AI_URL = import.meta.env.VITE_EDGE_AI_URL as string | undefined
-
-export const edgeAiConfigured = Boolean(EDGE_AI_URL)
+export { isEdgeAiConfigured }
 
 /**
  * 呼叫邊緣 AI。回傳「疑似船隻」的 GeoJSON。
  * 加了 8 秒 timeout 與錯誤處理，避免海上網路不穩時 UI 卡死。
  */
 export async function detectVessels(bbox: BBox, date: string): Promise<DetectionCollection> {
-  if (!EDGE_AI_URL) return mockDetect(bbox)
+  const edgeUrl = getConfig().edgeAiUrl
+  if (!edgeUrl) return mockDetect(bbox)
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 8000)
   try {
-    const res = await fetch(EDGE_AI_URL, {
+    const res = await fetch(edgeUrl, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ bbox, date }),

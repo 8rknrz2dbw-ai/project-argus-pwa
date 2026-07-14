@@ -36,11 +36,15 @@ interface TacticalState {
   rescueEnv: MarineEnv | null
   /** 漂流預測結果。 */
   driftPoints: DriftPoint[]
-  /** 落海到現在經過的時間（分鐘），影響搜索時間點。 */
   rescueStatus: 'idle' | 'loading' | 'done'
+  /** 時間軸拉桿的小時數（0 = 不顯示 scrubber）。 */
+  scrubHours: number
 
   // ── AIS 船舶識別 (ais) ──────────────────────────────
   vessels: Vessel[]
+
+  // ── 我的位置 (GPS，跨模式保留) ──────────────────────
+  ownPosition: { lat: number; lng: number; accuracy: number } | null
 
   // ── 狀態列訊息（給海上人員的即時回饋）───────────────
   statusMessage: string
@@ -58,6 +62,8 @@ interface TacticalState {
   setRescueResult: (env: MarineEnv | null, points: DriftPoint[]) => void
   setRescueStatus: (s: TacticalState['rescueStatus']) => void
   setVessels: (v: Vessel[]) => void
+  setOwnPosition: (p: TacticalState['ownPosition']) => void
+  setScrubHours: (h: number) => void
 }
 
 const today = new Date().toISOString().slice(0, 10)
@@ -75,7 +81,9 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   rescueEnv: null,
   driftPoints: [],
   rescueStatus: 'idle',
+  scrubHours: 0,
   vessels: [],
+  ownPosition: null,
   statusMessage: '軌道預警模式待命中',
 
   setMode: (mode) =>
@@ -92,6 +100,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
       rescueEnv: null,
       driftPoints: [],
       rescueStatus: 'idle',
+      scrubHours: 0,
       vessels: [],
       statusMessage: MODE_HINT[mode],
     })),
@@ -107,6 +116,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setRescueResult: (env, points) => set({ rescueEnv: env, driftPoints: points }),
   setRescueStatus: (s) => set({ rescueStatus: s }),
   setVessels: (v) => set({ vessels: v }),
+  setOwnPosition: (p) => set({ ownPosition: p }),
+  setScrubHours: (h) => set({ scrubHours: h }),
 }))
 
 const MODE_HINT: Record<TacticalMode, string> = {

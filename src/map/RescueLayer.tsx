@@ -18,8 +18,13 @@ export function RescueLayer({ map }: { map: L.Map }) {
   const setRescueStatus = useTacticalStore((s) => s.setRescueStatus)
   const setStatus = useTacticalStore((s) => s.setStatus)
 
+  const manOverboard = useTacticalStore((s) => s.manOverboard)
+  const rescueEnv = useTacticalStore((s) => s.rescueEnv)
+  const scrubHours = useTacticalStore((s) => s.scrubHours)
+
   const fieldRef = useRef<L.LayerGroup | null>(null) // 風/流箭頭
   const driftRef = useRef<L.LayerGroup | null>(null) // 落海點 + 漂流
+  const scrubRef = useRef<L.LayerGroup | null>(null) // 時間軸 scrubber
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -82,11 +87,52 @@ export function RescueLayer({ map }: { map: L.Map }) {
       drift.clearLayers()
       map.removeLayer(field)
       map.removeLayer(drift)
+      if (scrubRef.current) {
+        scrubRef.current.clearLayers()
+        map.removeLayer(scrubRef.current)
+        scrubRef.current = null
+      }
       fieldRef.current = null
       driftRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
+
+  // ── 時間軸 scrubber：拉桿到任意小時，畫出該時刻的漂流位置 ──
+  useEffect(() => {
+    if (mode !== 'rescue') return
+    if (!scrubRef.current) scrubRef.current = L.layerGroup().addTo(map)
+    const g = scrubRef.current
+    g.clearLayers()
+    if (scrubHours > 0 && manOverboard && rescueEnv) {
+      const [p] = predictDrift({
+        lat: manOverboard.lat,
+        lng: manOverboard.lng,
+        wind: { speed: rescueEnv.windSpeed, dirDeg: rescueEnv.windDir },
+        current: { speed: rescueEnv.currentSpeed, dirDeg: rescueEnv.currentDir },
+        hoursList: [scrubHours],
+      })
+      L.circle([p.lat, p.lng], {
+        radius: p.radiusMeters,
+        color: '#fbbf24',
+        weight: 2,
+        fillColor: '#fbbf24',
+        fillOpacity: 0.12,
+      }).addTo(g)
+      L.marker([p.lat, p.lng], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div class="scrub-label">${scrubHours.toFixed(1)}h</div>`,
+          iconSize: [40, 18],
+          iconAnchor: [20, 9],
+        }),
+        zIndexOffset: 1100,
+      }).addTo(g)
+    }
+    return () => {
+      g.clearLayers()
+    }
+  }, [mode, scrubHours, manOverboard, rescueEnv, map])
 
   return null
 }

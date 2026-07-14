@@ -1,5 +1,5 @@
 import { useTacticalStore } from '../store/tacticalStore'
-import { aisConfigured } from '../lib/ais'
+import { isAisConfigured } from '../lib/ais'
 
 /** AIS 模式控制面板：船舶數與可疑船隻提示。 */
 export function AisControls() {
@@ -19,7 +19,7 @@ export function AisControls() {
         </div>
       )}
       <p className="text-[10px] leading-relaxed text-slate-500">點船隻圖標可看船名、MMSI、航速航向。</p>
-      {!aisConfigured && (
+      {!isAisConfigured() && (
         <p className="text-[10px] leading-relaxed text-amber-500/80">
           目前為模擬船隻。到 aisstream.io 免費申請金鑰，填入 VITE_AISSTREAM_KEY 即接真實 AIS。
         </p>

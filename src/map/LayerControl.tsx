@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import { useTacticalStore } from '../store/tacticalStore'
 import { SatelliteCanvasLayer } from './SatelliteCanvasLayer'
-import { buildWmsConfig, LAYERS, sentinelConfigured } from '../lib/sentinel'
+import { buildWmsConfig, LAYERS, isSentinelConfigured } from '../lib/sentinel'
 import type { DetectionCollection } from '../types'
 
 /**
@@ -73,7 +73,7 @@ export function LayerControl({ map }: { map: L.Map }) {
     }
 
     function mountWms(layer: string, maxcc: number | undefined) {
-      if (!sentinelConfigured) {
+      if (!isSentinelConfigured()) {
         setStatus('⚠ 未設定 Sentinel Hub 金鑰，影像層停用（見 .env.example）')
         return
       }

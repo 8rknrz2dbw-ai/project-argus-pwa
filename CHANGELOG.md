@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.4.0-beta.1 — Field Operations
+
+### 新增
+- ⚙️ **App 內金鑰設定面板**：直接在 App 貼 Sentinel / AIS / 邊緣 AI 金鑰
+  （存 localStorage），免改 Vercel 環境變數、免重新部署。手機也能設。
+- 📍 **GPS「我的位置」**：定位自身、畫藍點與精度圈；搜救模式顯示與落海點距離（浬）。
+- ⏱️ **漂流時間軸拉桿**：0–6 小時連續拉動，即時看任意時刻的漂流位置（琥珀色）。
+- 📋 **搜救報告產生與分享**：一鍵產生含落海點、海象、各時段漂流的文字報告，
+  用 Web Share 分享或複製到剪貼簿（度分海事座標格式）。
+- SETUP_KEYS.md：手機就能跟做的免費金鑰申請教學。
+
+### 重構
+- 資料源金鑰改為 runtime 讀取（localStorage 優先，env fallback），
+  存檔後重載即套用，不需重新部署。
+
 ## v1.3.0-beta.1 — Maritime SAR & Environment
 
 ### 新增

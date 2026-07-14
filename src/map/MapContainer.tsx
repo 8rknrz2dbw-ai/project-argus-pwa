@@ -5,6 +5,7 @@ import { LayerControl } from './LayerControl'
 import { BBoxSelector } from './BBoxSelector'
 import { AisLayer } from './AisLayer'
 import { RescueLayer } from './RescueLayer'
+import { LocateControl } from './LocateControl'
 
 /**
  * MapContainer —— 唯一的地圖實體。
@@ -55,6 +56,7 @@ export function MapContainer() {
       {map && <BBoxSelector map={map} />}
       {map && <AisLayer map={map} />}
       {map && <RescueLayer map={map} />}
+      {map && <LocateControl map={map} />}
     </div>
   )
 }

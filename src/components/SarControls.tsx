@@ -1,5 +1,5 @@
 import { useTacticalStore } from '../store/tacticalStore'
-import { edgeAiConfigured } from '../lib/edgeAI'
+import { isEdgeAiConfigured } from '../lib/edgeAI'
 
 /**
  * 雷達盲搜模式的控制項：框選按鈕 + AI 狀態。
@@ -36,7 +36,7 @@ export function SarControls() {
         </span>
       </div>
 
-      {!edgeAiConfigured && (
+      {!isEdgeAiConfigured() && (
         <p className="text-[10px] leading-relaxed text-amber-500/80">
           ⚠ 未設定 VITE_EDGE_AI_URL，目前使用本機 mock 偵測。部署 Cloudflare Worker
           後填入即可接真實邊緣 AI。

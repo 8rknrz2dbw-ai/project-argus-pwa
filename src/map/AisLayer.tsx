@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import { useTacticalStore } from '../store/tacticalStore'
-import { subscribeAIS, aisConfigured, type Vessel } from '../lib/ais'
+import { subscribeAIS, isAisConfigured, type Vessel } from '../lib/ais'
 
 /**
  * AIS 船舶圖層。只在 ais 模式運行：訂閱 AIS → 畫出船隻（三角形依航向旋轉）
@@ -19,7 +19,7 @@ export function AisLayer({ map }: { map: L.Map }) {
     const group = L.layerGroup().addTo(map)
     groupRef.current = group
     setStatus(
-      aisConfigured
+      isAisConfigured()
         ? 'AIS：連線 aisstream.io 即時船位'
         : 'AIS：模擬船隻展示中（設定 VITE_AISSTREAM_KEY 可接真實資料）',
     )

@@ -1,5 +1,6 @@
 import { useTacticalStore } from '../store/tacticalStore'
 import { bearingToText } from '../lib/drift'
+import { buildReport, shareReport } from '../lib/report'
 
 /**
  * 搜救推演控制面板：顯示即時海象摘要 + 漂流結果，並提示操作。
@@ -9,6 +10,9 @@ export function RescueControls() {
   const drift = useTacticalStore((s) => s.driftPoints)
   const status = useTacticalStore((s) => s.rescueStatus)
   const mob = useTacticalStore((s) => s.manOverboard)
+  const own = useTacticalStore((s) => s.ownPosition)
+  const scrubHours = useTacticalStore((s) => s.scrubHours)
+  const setScrubHours = useTacticalStore((s) => s.setScrubHours)
   const setMob = useTacticalStore((s) => s.setManOverboard)
   const setResult = useTacticalStore((s) => s.setRescueResult)
   const setStatus = useTacticalStore((s) => s.setStatus)
@@ -16,8 +20,20 @@ export function RescueControls() {
   const clear = () => {
     setMob(null)
     setResult(null, [])
+    setScrubHours(0)
     setStatus('搜救推演模式：點地圖標記落海點，計算漂流')
   }
+
+  const share = async () => {
+    if (!mob || !env) return
+    const text = buildReport({ mob, env, drift })
+    const how = await shareReport(text)
+    setStatus(how === 'shared' ? '報告已分享' : how === 'copied' ? '報告已複製到剪貼簿' : '⚠ 分享失敗')
+  }
+
+  // 我的位置到落海點的距離（浬）
+  const distNm =
+    own && mob ? haversineNm(own.lat, own.lng, mob.lat, mob.lng) : null
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-slate-700 bg-tactical-panel/90 p-3">
@@ -58,13 +74,52 @@ export function RescueControls() {
         </div>
       )}
 
+      {/* 時間軸拉桿：拉到任意時間看漂流位置 */}
+      {status === 'done' && drift.length > 0 && (
+        <div>
+          <div className="mb-1 flex items-center justify-between">
+            <label className="text-[11px] font-semibold text-amber-400">⏱ 時間軸</label>
+            <span className="font-mono text-[11px] text-amber-400">
+              {scrubHours === 0 ? '關' : `${scrubHours.toFixed(1)} 小時後`}
+            </span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={6}
+            step={0.5}
+            value={scrubHours}
+            onChange={(e) => setScrubHours(Number(e.target.value))}
+            className="w-full accent-amber-400"
+          />
+        </div>
+      )}
+
+      {/* 我的位置 → 落海點 距離 */}
+      {distNm !== null && (
+        <div className="flex items-center justify-between rounded border border-sky-500/40 bg-sky-500/5 px-2 py-1.5 text-[11px]">
+          <span className="text-sky-300">📍 我 → 落海點</span>
+          <span className="font-mono text-sky-200">{distNm.toFixed(1)} 浬</span>
+        </div>
+      )}
+
       {mob && (
-        <button
-          onClick={clear}
-          className="rounded border border-slate-600 py-1.5 text-xs text-slate-300 active:scale-95"
-        >
-          ✕ 清除落海點，重新標記
-        </button>
+        <div className="flex gap-2">
+          {status === 'done' && drift.length > 0 && (
+            <button
+              onClick={share}
+              className="flex-1 rounded border border-tactical-green/50 bg-tactical-green/10 py-1.5 text-xs font-semibold text-tactical-green active:scale-95"
+            >
+              📋 產生並分享報告
+            </button>
+          )}
+          <button
+            onClick={clear}
+            className="rounded border border-slate-600 px-3 py-1.5 text-xs text-slate-300 active:scale-95"
+          >
+            ✕ 清除
+          </button>
+        </div>
       )}
 
       {/* 圖例 */}
@@ -81,6 +136,16 @@ export function RescueControls() {
       </div>
     </div>
   )
+}
+
+/** 兩點大圓距離（海浬）。 */
+function haversineNm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000
+  const d = Math.PI / 180
+  const a =
+    Math.sin(((lat2 - lat1) * d) / 2) ** 2 +
+    Math.cos(lat1 * d) * Math.cos(lat2 * d) * Math.sin(((lng2 - lng1) * d) / 2) ** 2
+  return (2 * R * Math.asin(Math.sqrt(a))) / 1852
 }
 
 function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {

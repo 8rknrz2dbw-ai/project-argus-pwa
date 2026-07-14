@@ -67,6 +67,27 @@ body,
   animation: pulse-alert 1s ease-in-out infinite;
 }
 
+/* 我的位置藍點 */
+.own-pos {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #38bdf8;
+  border: 2px solid #e0f2fe;
+  box-shadow: 0 0 10px #38bdf8;
+}
+
+/* 時間軸 scrubber 標籤（琥珀色） */
+.scrub-label {
+  font: 700 11px ui-monospace, monospace;
+  color: #451a03;
+  background: #fbbf24;
+  border-radius: 9px;
+  text-align: center;
+  line-height: 18px;
+  box-shadow: 0 0 8px #fbbf24;
+}
+
 /* 漂流時間標籤 */
 .drift-label {
   font: 700 11px ui-monospace, monospace;
