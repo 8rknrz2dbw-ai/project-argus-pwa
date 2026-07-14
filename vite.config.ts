@@ -34,11 +34,11 @@ export default defineConfig({
         // time-sensitive) to protect the phone's storage.
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/[abc]\.tile\.openstreetmap\.org\/.*/i,
+            urlPattern: /^https:\/\/[abcd]\.basemaps\.cartocdn\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'osm-base-tiles',
-              expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 7 },
+              cacheName: 'carto-dark-tiles',
+              expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 7 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },

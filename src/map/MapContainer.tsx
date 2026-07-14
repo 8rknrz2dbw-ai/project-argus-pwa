@@ -25,11 +25,14 @@ export function MapContainer() {
       preferCanvas: true,
     })
 
-    // Base Layer：OSM 暗色底圖（軍事雷達幕質感）
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
-      className: 'base-tiles-dark', // CSS filter 壓暗
-      attribution: '&copy; OpenStreetMap',
+    // Base Layer：CARTO dark_matter 真・深色底圖（軍事雷達幕質感）。
+    // 直接用專業深色圖磚，不再用 CSS invert 濾鏡（會把 OSM 洗成灰白）。
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      subdomains: 'abcd',
+      detectRetina: true,
+      className: 'base-tiles-tactical',
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
     }).addTo(m)
 
     L.control.zoom({ position: 'topright' }).addTo(m)
@@ -45,6 +48,7 @@ export function MapContainer() {
   return (
     <div className="absolute inset-0">
       <div ref={elRef} className="h-full w-full" />
+      <div className="radar-vignette" />
       {map && <LayerControl map={map} />}
       {map && <BBoxSelector map={map} />}
     </div>

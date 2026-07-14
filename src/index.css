@@ -12,10 +12,41 @@ body,
   font-family: system-ui, -apple-system, 'Noto Sans TC', sans-serif;
 }
 
-/* Base Layer 暗色化：把明亮的 OSM 底圖壓成雷達幕質感 */
-.base-tiles-dark {
-  filter: brightness(0.55) invert(1) contrast(0.9) hue-rotate(180deg) saturate(0.5)
-    brightness(0.9);
+/* 深色底圖已改用 CARTO dark_matter，這裡只做輕微微調＋雷達幕氛圍 */
+.base-tiles-tactical {
+  filter: brightness(0.9) contrast(1.05) saturate(1.1);
+}
+
+/* 雷達幕暈影：邊緣壓暗、中心透亮，營造圓形雷達掃描視覺（不擋操作）*/
+.radar-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 400;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 55%,
+    rgba(15, 23, 42, 0.55) 100%
+  );
+}
+/* 中心細十字準星 */
+.radar-vignette::before,
+.radar-vignette::after {
+  content: '';
+  position: absolute;
+  background: rgba(34, 211, 238, 0.12);
+}
+.radar-vignette::before {
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+.radar-vignette::after {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
 }
 
 /* AI 偵測框（疑似船隻） */
