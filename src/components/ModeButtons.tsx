@@ -9,9 +9,11 @@ interface ModeDef {
 }
 
 const MODES: ModeDef[] = [
-  { id: 'orbit', icon: '🛰️', title: '軌道預警', subtitle: 'Orbit · 即時衛星軌跡' },
-  { id: 'sar', icon: '🚢', title: '雷達盲搜', subtitle: 'SAR · AI 船隻辨識' },
-  { id: 'optical', icon: '🌤️', title: '岸際光學', subtitle: 'Optical · 低雲量影像' },
+  { id: 'orbit', icon: '🛰️', title: '軌道預警', subtitle: 'Orbit · 衛星軌跡' },
+  { id: 'sar', icon: '🚢', title: '雷達盲搜', subtitle: 'SAR · AI 辨識' },
+  { id: 'optical', icon: '🌤️', title: '岸際光學', subtitle: 'Optical · 低雲量' },
+  { id: 'ais', icon: '📡', title: 'AIS 識別', subtitle: 'AIS · 即時船位' },
+  { id: 'rescue', icon: '🆘', title: '搜救推演', subtitle: 'Rescue · 漂流預判' },
 ]
 
 /**
@@ -23,7 +25,7 @@ export function ModeButtons() {
   const setMode = useTacticalStore((s) => s.setMode)
 
   return (
-    <div className="flex gap-2 md:flex-col">
+    <div className="flex gap-2 overflow-x-auto pb-1 md:flex-col md:overflow-visible">
       {MODES.map((m) => {
         const active = mode === m.id
         return (
@@ -31,7 +33,8 @@ export function ModeButtons() {
             key={m.id}
             onClick={() => setMode(m.id)}
             className={[
-              'flex flex-1 items-center gap-3 rounded-lg border px-3 py-4 text-left transition-all',
+              'flex shrink-0 items-center gap-2.5 rounded-lg border px-3 py-4 text-left transition-all',
+              'min-w-[124px] md:min-w-0 md:flex-1',
               'active:scale-95 touch-manipulation min-h-[64px]',
               active
                 ? 'border-tactical-cyan bg-tactical-cyan/15 shadow-[0_0_16px_rgba(34,211,238,0.4)]'

@@ -3,13 +3,10 @@
 // 我們不自己算雲量：直接在 WMS 請求注入 MAXCC 參數，交給歐洲太空總署
 // 的伺服器篩選好再回傳。同理 Sentinel-1 SAR 也是走 WMS layer。
 
-const INSTANCE_ID = import.meta.env.VITE_SENTINEL_INSTANCE_ID as string | undefined
-const WMS_URL =
-  (import.meta.env.VITE_SENTINEL_WMS_URL as string | undefined) ??
-  'https://sh.dataspace.copernicus.eu/ogc/wms'
+import { getConfig, isSentinelConfigured } from './config'
 
 /** 是否已設定金鑰。未設定時 UI 要顯示提示，而不是嘗試載入而破圖。 */
-export const sentinelConfigured = Boolean(INSTANCE_ID)
+export { isSentinelConfigured }
 
 export interface SentinelOptions {
   /** WMS layer 名稱，例如 'TRUE-COLOR-S2L2A'（光學）或 'SAR-VV'（雷達）。 */
@@ -28,7 +25,8 @@ export function buildWmsConfig(opts: SentinelOptions): {
   url: string
   params: Record<string, string | number | boolean>
 } {
-  const url = `${WMS_URL}/${INSTANCE_ID ?? 'MISSING_INSTANCE_ID'}`
+  const cfg = getConfig()
+  const url = `${cfg.sentinelWmsUrl}/${cfg.sentinelInstanceId || 'MISSING_INSTANCE_ID'}`
   const params: Record<string, string | number | boolean> = {
     layers: opts.layer,
     format: 'image/png',

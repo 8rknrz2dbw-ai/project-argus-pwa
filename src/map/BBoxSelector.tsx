@@ -24,27 +24,39 @@ export function BBoxSelector({ map }: { map: L.Map }) {
   const rectRef = useRef<L.Rectangle | null>(null)
 
   useEffect(() => {
+    const container = map.getContainer()
     if (!selecting) {
-      // 離開框選模式：恢復地圖拖曳、清掉暫存矩形
+      // 離開框選模式：恢復地圖拖曳、還原觸控行為
       map.dragging.enable()
-      map.getContainer().style.cursor = ''
+      container.style.cursor = ''
+      container.style.touchAction = ''
       return
     }
 
+    // 進入框選：停用地圖拖曳，並用 touchAction:none 阻止手機頁面捲動，
+    // 這樣手指拖動才會被我們用來畫框，而不是滑地圖/捲頁面。
     map.dragging.disable()
-    map.getContainer().style.cursor = 'crosshair'
+    container.style.cursor = 'crosshair'
+    container.style.touchAction = 'none'
 
-    const onDown = (e: L.LeafletMouseEvent) => {
-      startRef.current = e.latlng
+    // 用原生 Pointer Events：滑鼠與觸控（手機）統一處理。
+    const toLatLng = (ev: PointerEvent) => {
+      const rect = container.getBoundingClientRect()
+      return map.containerPointToLatLng([ev.clientX - rect.left, ev.clientY - rect.top])
+    }
+
+    const onDown = (ev: PointerEvent) => {
+      container.setPointerCapture?.(ev.pointerId)
+      startRef.current = toLatLng(ev)
       if (rectRef.current) {
         map.removeLayer(rectRef.current)
         rectRef.current = null
       }
     }
 
-    const onMove = (e: L.LeafletMouseEvent) => {
+    const onMove = (ev: PointerEvent) => {
       if (!startRef.current) return
-      const bounds = L.latLngBounds(startRef.current, e.latlng)
+      const bounds = L.latLngBounds(startRef.current, toLatLng(ev))
       if (rectRef.current) {
         rectRef.current.setBounds(bounds)
       } else {
@@ -59,7 +71,10 @@ export function BBoxSelector({ map }: { map: L.Map }) {
     }
 
     const onUp = async () => {
-      if (!startRef.current || !rectRef.current) return
+      if (!startRef.current || !rectRef.current) {
+        startRef.current = null
+        return
+      }
       const b = rectRef.current.getBounds()
       startRef.current = null
       const bbox = {
@@ -86,14 +101,16 @@ export function BBoxSelector({ map }: { map: L.Map }) {
       }
     }
 
-    map.on('mousedown', onDown)
-    map.on('mousemove', onMove)
-    map.on('mouseup', onUp)
+    container.addEventListener('pointerdown', onDown)
+    container.addEventListener('pointermove', onMove)
+    container.addEventListener('pointerup', onUp)
+    container.addEventListener('pointercancel', onUp)
 
     return () => {
-      map.off('mousedown', onDown)
-      map.off('mousemove', onMove)
-      map.off('mouseup', onUp)
+      container.removeEventListener('pointerdown', onDown)
+      container.removeEventListener('pointermove', onMove)
+      container.removeEventListener('pointerup', onUp)
+      container.removeEventListener('pointercancel', onUp)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selecting])
