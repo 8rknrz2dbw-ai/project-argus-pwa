@@ -35,10 +35,18 @@ const K_GROUPS = 'argus.poi.groups.v1'
 const K_POINTS = 'argus.poi.points.v1'
 const K_HIDDEN = 'argus.poi.hidden.v1'
 
-/** 群組圖示 emoji 快選集（海巡情境）。使用者也可自行輸入任何 emoji。 */
+/** 群組圖示 emoji 快選集（海巡情境，分類用）。 */
 export const POI_ICONS = [
-  '🛡️', '🏛️', '⚓', '🚔', '🚨', '🔺', '📍', '🏴', '⛴️', '🛥️',
-  '🏢', '🗼', '🧭', '⚠️', '🎯', '🏥', '⛽', '🅿️',
+  // 機關/據點
+  '🛡️', '🏛️', '🏢', '🗼', '🏭', '🏫', '🏥', '⚓', '🚨', '🚔',
+  // 海上載具
+  '⛴️', '🛥️', '🚤', '⛵', '🚢', '🛳️', '🚁', '🛟', '🎣', '🐟',
+  // 標記/方向
+  '📍', '📌', '🚩', '🏁', '🏴', '🎯', '🧭', '🔦', '⚠️', '🚧',
+  // 數字（分署/編號好分類）
+  '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟',
+  // 顏色圓（純視覺分類）
+  '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🔺',
 ]
 
 /** 群組顏色快選集。 */
@@ -64,8 +72,7 @@ function write(key: string, val: unknown) {
 
 export function loadGroups(): PoiGroup[] {
   const list = read<PoiGroup[]>(K_GROUPS, [])
-  if (!Array.isArray(list) || list.length === 0) return defaultGroups()
-  return list.filter((g) => g && typeof g.id === 'string')
+  return Array.isArray(list) ? list.filter((g) => g && typeof g.id === 'string') : []
 }
 export function persistGroups(list: PoiGroup[]) {
   write(K_GROUPS, list)
@@ -84,11 +91,6 @@ export function loadHidden(): boolean {
 }
 export function persistHidden(v: boolean) {
   write(K_HIDDEN, v)
-}
-
-/** 首次使用給一個範例群組（可改名/刪除），讓介面不空、示範用法。 */
-function defaultGroups(): PoiGroup[] {
-  return [{ id: newId(Date.now()), name: '海巡署', icon: '🛡️', color: '#22d3ee', visible: true }]
 }
 
 export { newId }

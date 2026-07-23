@@ -110,6 +110,22 @@ export function FieldOpsPanel() {
     setShowAddGroup(false)
   }
 
+  // 編輯群組（改名/換圖示/換色）
+  const [editId, setEditId] = useState<string | null>(null)
+  const [eName, setEName] = useState('')
+  const [eIcon, setEIcon] = useState(POI_ICONS[0])
+  const [eColor, setEColor] = useState(POI_COLORS[0])
+  const startEdit = (id: string, name: string, icon: string, color: string) => {
+    setEditId(id)
+    setEName(name)
+    setEIcon(icon)
+    setEColor(color)
+  }
+  const saveEdit = () => {
+    if (editId) updatePoiGroup(editId, { name: eName.trim() || '群組', icon: eIcon, color: eColor })
+    setEditId(null)
+  }
+
   const [expand, setExpand] = useState<string | null>(null)
 
   return (
@@ -202,10 +218,11 @@ export function FieldOpsPanel() {
                     />
                   </div>
                   <div className="mt-1 flex items-center gap-1">
-                    <input value={pLat} onChange={(e) => setPLat(e.target.value)} inputMode="decimal" placeholder="緯度" className="w-0 flex-1 rounded border border-slate-600 bg-slate-900 px-2 py-1.5 font-mono text-xs text-slate-200" />
+                    <input value={pLat} onChange={(e) => setPLat(e.target.value)} spellCheck={false} placeholder="緯度（可貼整串萬用座標）" className="w-0 flex-1 rounded border border-slate-600 bg-slate-900 px-2 py-1.5 font-mono text-xs text-slate-200" />
                     <input value={pLng} onChange={(e) => setPLng(e.target.value)} inputMode="decimal" placeholder="經度" className="w-0 flex-1 rounded border border-slate-600 bg-slate-900 px-2 py-1.5 font-mono text-xs text-slate-200" />
                     <button onClick={useCenter} title="用畫面中心座標" className="shrink-0 rounded border border-slate-600 px-2 py-1.5 text-[10px] text-slate-300 active:scale-95">📍中心</button>
                   </div>
+                  <p className="mt-0.5 text-[9px] text-slate-500">座標為<b className="text-slate-400">萬用格式</b>：十進位 24.5 122.0、度分 24°30'N 122°E、度分秒皆可（可整串貼在「緯度」欄）。</p>
                   <div className="mt-1 flex items-center gap-2">
                     <button onClick={checkElev} disabled={!parsedPt || elevBusy} className="rounded border border-slate-600 px-2 py-1 text-[10px] text-slate-300 active:scale-95 disabled:opacity-40">
                       ⛰️ {elevBusy ? '查詢中…' : '查海拔'}
@@ -256,13 +273,14 @@ export function FieldOpsPanel() {
                 const gp = points.filter((p) => p.groupId === g.id)
                 return (
                   <div key={g.id} className="rounded-lg border border-slate-700 bg-slate-900/40 p-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <button onClick={() => updatePoiGroup(g.id, { visible: !g.visible })} title="顯示/隱藏此群組" className="text-base active:scale-95">
                         {g.visible ? '👁' : '🚫'}
                       </button>
                       <span className="text-base" style={{ filter: `drop-shadow(0 0 3px ${g.color})` }}>{g.icon}</span>
                       <span className="flex-1 truncate text-sm font-semibold text-slate-200">{g.name}</span>
-                      <span className="font-mono text-[10px] text-slate-500">{gp.length} 點</span>
+                      <span className="font-mono text-[10px] text-slate-500">{gp.length}</span>
+                      <button onClick={() => startEdit(g.id, g.name, g.icon, g.color)} title="編輯群組" className="rounded border border-slate-600 px-1.5 py-0.5 text-[10px] text-tactical-cyan active:scale-95">✏️</button>
                       <button onClick={() => setExpand(expand === g.id ? null : g.id)} className="rounded border border-slate-600 px-1.5 py-0.5 text-[10px] text-slate-300 active:scale-95">
                         {expand === g.id ? '收合' : '展開'}
                       </button>
@@ -271,6 +289,29 @@ export function FieldOpsPanel() {
                         className="rounded border border-slate-700 px-1.5 py-0.5 text-[10px] text-tactical-alert active:scale-95"
                       >🗑</button>
                     </div>
+
+                    {editId === g.id && (
+                      <div className="mt-2 rounded-lg border border-tactical-cyan/40 bg-slate-900/60 p-2">
+                        <input value={eName} onChange={(e) => setEName(e.target.value)} placeholder="群組名稱" className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1.5 text-xs text-slate-200" />
+                        <div className="mt-2 text-[10px] text-slate-500">圖示</div>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {POI_ICONS.map((ic) => (
+                            <button key={ic} onClick={() => setEIcon(ic)} className={`h-7 w-7 rounded border text-base active:scale-95 ${eIcon === ic ? 'border-tactical-cyan bg-tactical-cyan/20' : 'border-slate-700'}`}>{ic}</button>
+                          ))}
+                        </div>
+                        <div className="mt-2 text-[10px] text-slate-500">顏色</div>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {POI_COLORS.map((c) => (
+                            <button key={c} onClick={() => setEColor(c)} className={`h-7 w-7 rounded-full border-2 active:scale-95 ${eColor === c ? 'border-white' : 'border-slate-700'}`} style={{ background: c }} />
+                          ))}
+                        </div>
+                        <div className="mt-2 flex gap-1">
+                          <button onClick={saveEdit} className="flex-1 rounded border border-tactical-green bg-tactical-green/15 py-1.5 text-xs font-bold text-tactical-green active:scale-95">儲存變更</button>
+                          <button onClick={() => setEditId(null)} className="rounded border border-slate-600 px-3 py-1.5 text-xs text-slate-300 active:scale-95">取消</button>
+                        </div>
+                      </div>
+                    )}
+
                     {expand === g.id && (
                       <div className="mt-1.5 flex flex-col gap-0.5">
                         {gp.length === 0 && <p className="text-[10px] text-slate-500">尚無點位。用上方「➕ 新增點位」選這個群組來加。</p>}
