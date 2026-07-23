@@ -21,6 +21,7 @@ const VERDICT_STYLE: Record<string, string> = {
  */
 export function TyphoonControls() {
   const active = useTacticalStore((s) => s.activeTyphoon)
+  const own = useTacticalStore((s) => s.ownPosition)
   const cwa = isCwaConfigured()
 
   // 查詢中（尚未取得任何颱風資料）：顯示載入，不先塞示範。
@@ -43,7 +44,10 @@ export function TyphoonControls() {
   const future = ty.track.filter((p) => p.hours > 0)
   const warn = estimateWarnings(ty)
   const cg = coastGuardVerdict(warn)
-  const brief = typhoonBrief(ty)
+  // 有 GPS 定位就以「您所在位置」研判方位/距離/侵襲機率，否則以台灣中心。
+  const brief = own
+    ? typhoonBrief(ty, { lat: own.lat, lng: own.lng }, '您所在位置')
+    : typhoonBrief(ty)
   const designation = !ty.demo && isDesignation(ty.name)
 
   const threatColor =
@@ -84,6 +88,9 @@ export function TyphoonControls() {
       <div className={`rounded-lg border p-2 ${threatColor}`}>
         <div className="mb-1 flex items-center gap-1 text-[11px] font-bold">
           <span>👮</span> 預報員解讀
+          <span className="ml-auto text-[9px] font-normal opacity-70">
+            {own ? '依您 GPS 位置' : '依台灣中心（開 📍 定位更貼身）'}
+          </span>
         </div>
         <p className="text-[11px] leading-relaxed">{brief.headline}</p>
         <p className="mt-1 text-[11px] font-semibold">👉 {brief.advice}</p>

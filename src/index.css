@@ -256,6 +256,19 @@ body,
     transform: rotate(360deg);
   }
 }
+/* 您的位置↔颱風 相對距離標籤 */
+.rel-label {
+  font: 700 10px ui-monospace, monospace;
+  color: #bae6fd;
+  background: rgba(8, 47, 73, 0.85);
+  border: 1px solid #38bdf8;
+  border-radius: 8px;
+  text-align: center;
+  line-height: 14px;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
 /* 颱風預報時間標籤 */
 .ty-time {
   font: 700 10px ui-monospace, monospace;
