@@ -76,7 +76,9 @@ export function RescueLayer({ map }: { map: L.Map }) {
     }
 
     // 點地圖只設標記點；海象抓取交給下方 effect（點選或手動輸入座標都適用）。
+    // 量測工具啟用時，讓量測優先（不搶點）。
     const onClick = (e: L.LeafletMouseEvent) => {
+      if (useTacticalStore.getState().measuring) return
       setManOverboard({ lat: e.latlng.lat, lng: e.latlng.lng })
     }
 

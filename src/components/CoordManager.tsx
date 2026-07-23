@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTacticalStore } from '../store/tacticalStore'
 import { parseCoord, fmtDecimal, fmtDDM, fmtDMS } from '../lib/coordParse'
+import { shareReport } from '../lib/report'
 import type { SavedCoord } from '../lib/savedCoords'
 
 /**
@@ -17,6 +18,8 @@ export function CoordManager() {
   const updateSavedCoord = useTacticalStore((s) => s.updateSavedCoord)
   const removeSavedCoord = useTacticalStore((s) => s.removeSavedCoord)
   const clearHistory = useTacticalStore((s) => s.clearHistory)
+  const setMode = useTacticalStore((s) => s.setMode)
+  const setManOverboard = useTacticalStore((s) => s.setManOverboard)
   const setStatus = useTacticalStore((s) => s.setStatus)
 
   const parsed = parseCoord(text)
@@ -25,6 +28,28 @@ export function CoordManager() {
   const go = (lat: number, lng: number) => {
     gotoCoord(lat, lng, 12)
     setStatus(`已跳到 ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+  }
+  // 設為搜救落海點：切到搜救模式並標記（setMode 會清空，故其後再標）
+  const asRescue = (lat: number, lng: number) => {
+    setMode('rescue')
+    setManOverboard({ lat, lng })
+    gotoCoord(lat, lng, 11)
+    setOpen(false)
+    setStatus('已設為搜救落海點，開始漂流推演')
+  }
+  // 匯出/分享已存座標（純文字，可貼進通訊軟體給隊友）
+  const exportCoords = async () => {
+    if (saved.length === 0) {
+      setStatus('尚無已存座標可匯出')
+      return
+    }
+    const lines = ['【阿爾戈斯 座標清單】']
+    for (const c of saved) {
+      const tags = `${c.pinned ? '📌' : ''}${c.favorite ? '★' : ''}`
+      lines.push(`${tags}${c.label}｜${fmtDecimal(c.lat, c.lng)}｜${fmtDDM(c.lat, c.lng)}`)
+    }
+    const how = await shareReport(lines.join('\n'))
+    setStatus(how === 'shared' ? '座標清單已分享' : how === 'copied' ? '座標清單已複製到剪貼簿' : '⚠ 分享失敗')
   }
   const add = (pinned: boolean, favorite: boolean) => {
     if (!parsed) return
@@ -51,9 +76,16 @@ export function CoordManager() {
           <div className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-xl border border-slate-700 bg-tactical-bg p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-base font-bold text-tactical-cyan">📌 座標管理</h2>
-              <button onClick={() => setOpen(false)} className="text-slate-400 active:scale-95">
-                ✕
-              </button>
+              <div className="flex items-center gap-3">
+                {saved.length > 0 && (
+                  <button onClick={exportCoords} className="text-[11px] text-tactical-green active:scale-95">
+                    📤 匯出/分享
+                  </button>
+                )}
+                <button onClick={() => setOpen(false)} className="text-slate-400 active:scale-95">
+                  ✕
+                </button>
+              </div>
             </div>
 
             {/* 萬用輸入 */}
@@ -81,22 +113,28 @@ export function CoordManager() {
                   <span className="text-slate-500">度分秒</span>
                   <span>{fmtDMS(parsed.lat, parsed.lng)}</span>
                 </div>
-                <div className="mt-2 flex gap-1">
+                <div className="mt-2 grid grid-cols-2 gap-1">
                   <button
                     onClick={() => go(parsed.lat, parsed.lng)}
-                    className="flex-1 rounded border border-tactical-cyan bg-tactical-cyan/15 py-1.5 text-xs font-bold text-tactical-cyan active:scale-95"
+                    className="rounded border border-tactical-cyan bg-tactical-cyan/15 py-1.5 text-xs font-bold text-tactical-cyan active:scale-95"
                   >
                     跳過去
                   </button>
                   <button
+                    onClick={() => asRescue(parsed.lat, parsed.lng)}
+                    className="rounded border border-tactical-alert/60 bg-tactical-alert/10 py-1.5 text-xs font-bold text-tactical-alert active:scale-95"
+                  >
+                    🆘 設為搜救點
+                  </button>
+                  <button
                     onClick={() => add(true, false)}
-                    className="flex-1 rounded border border-pink-500/60 bg-pink-500/10 py-1.5 text-xs font-bold text-pink-300 active:scale-95"
+                    className="rounded border border-pink-500/60 bg-pink-500/10 py-1.5 text-xs font-bold text-pink-300 active:scale-95"
                   >
                     📌 釘選
                   </button>
                   <button
                     onClick={() => add(false, true)}
-                    className="flex-1 rounded border border-amber-500/60 bg-amber-500/10 py-1.5 text-xs font-bold text-amber-300 active:scale-95"
+                    className="rounded border border-amber-500/60 bg-amber-500/10 py-1.5 text-xs font-bold text-amber-300 active:scale-95"
                   >
                     ★ 加最愛
                   </button>
@@ -111,6 +149,7 @@ export function CoordManager() {
                   key={c.id}
                   c={c}
                   onGo={() => go(c.lat, c.lng)}
+                  onAsRescue={() => asRescue(c.lat, c.lng)}
                   onRename={(label) => updateSavedCoord(c.id, { label })}
                   onTogglePin={() => updateSavedCoord(c.id, { pinned: !c.pinned })}
                   onToggleFav={() => updateSavedCoord(c.id, { favorite: !c.favorite })}
@@ -126,6 +165,7 @@ export function CoordManager() {
                   key={c.id}
                   c={c}
                   onGo={() => go(c.lat, c.lng)}
+                  onAsRescue={() => asRescue(c.lat, c.lng)}
                   onRename={(label) => updateSavedCoord(c.id, { label })}
                   onTogglePin={() => updateSavedCoord(c.id, { pinned: !c.pinned })}
                   onToggleFav={() => updateSavedCoord(c.id, { favorite: !c.favorite })}
@@ -204,6 +244,7 @@ function Section({
 function CoordRow({
   c,
   onGo,
+  onAsRescue,
   onRename,
   onTogglePin,
   onToggleFav,
@@ -211,6 +252,7 @@ function CoordRow({
 }: {
   c: SavedCoord
   onGo: () => void
+  onAsRescue: () => void
   onRename: (label: string) => void
   onTogglePin: () => void
   onToggleFav: () => void
@@ -240,6 +282,9 @@ function CoordRow({
             </span>
           </button>
         )}
+        <button onClick={onAsRescue} className="shrink-0 px-1 py-1 text-tactical-alert active:scale-95" title="設為搜救點">
+          🆘
+        </button>
         <button onClick={() => setEditing(!editing)} className="shrink-0 px-1 py-1 text-slate-400 active:scale-95" title="改名">
           ✎
         </button>

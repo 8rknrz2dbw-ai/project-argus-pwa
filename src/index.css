@@ -49,6 +49,23 @@ body,
   top: calc(0.5rem + env(safe-area-inset-top) + 15.8rem);
   right: calc(0.75rem + env(safe-area-inset-right));
 }
+/* 量測工具按鈕，再下一格 */
+.safe-float-top6 {
+  top: calc(0.5rem + env(safe-area-inset-top) + 19.2rem);
+  right: calc(0.75rem + env(safe-area-inset-right));
+}
+/* 量測段標籤 */
+.measure-label {
+  font: 700 10px ui-monospace, monospace;
+  color: #cffafe;
+  background: rgba(8, 51, 68, 0.9);
+  border: 1px solid #22d3ee;
+  border-radius: 8px;
+  text-align: center;
+  line-height: 15px;
+  white-space: nowrap;
+  padding: 0 4px;
+}
 /* 釘選座標記號 */
 .pin-marker {
   font-size: 22px;
