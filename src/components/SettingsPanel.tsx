@@ -122,7 +122,7 @@ export function SettingsPanel() {
             />
             <Field
               label="🌀 中央氣象署 CWA 授權碼"
-              hint="opendata.cwa.gov.tw 免費會員取得（rdec-key-...）。需搭配上方 Worker（CWA 無 CORS）；用於颱風即時路徑"
+              hint="opendata.cwa.gov.tw 免費會員取得。填了就會優先抓 CWA 官方颱風路徑/潮汐/海面預報（App 會先試直連，免 Worker；直連被擋才需 Worker）"
               value={cfg.cwaKey}
               onChange={(v) => setCfg({ ...cfg, cwaKey: v })}
               placeholder="CWA-XXXXXXXX-... 或 rdec-key-..."

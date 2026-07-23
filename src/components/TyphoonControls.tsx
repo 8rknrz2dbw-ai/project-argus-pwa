@@ -1,6 +1,7 @@
 import { demoTyphoon, currentPoint } from '../lib/typhoon'
 import { isCwaConfigured } from '../lib/config'
 import { estimateWarnings } from '../lib/typhoonWarning'
+import { typhoonBrief } from '../lib/typhoonBrief'
 import { useTacticalStore } from '../store/tacticalStore'
 
 /**
@@ -14,6 +15,15 @@ export function TyphoonControls() {
   const future = ty.track.filter((p) => p.hours > 0)
   const cwa = isCwaConfigured()
   const warn = estimateWarnings(ty)
+  const brief = typhoonBrief(ty)
+  const threatColor =
+    brief.threat === 'extreme'
+      ? 'border-rose-500/60 bg-rose-500/10 text-rose-200'
+      : brief.threat === 'high'
+        ? 'border-orange-500/50 bg-orange-500/10 text-orange-200'
+        : brief.threat === 'mid'
+          ? 'border-amber-500/40 bg-amber-500/10 text-amber-200'
+          : 'border-slate-600 bg-slate-800/50 text-slate-300'
 
   const now = Date.now()
   const etaText = (h: number | null) => {
@@ -37,6 +47,15 @@ export function TyphoonControls() {
             {cur.cat}｜近中心風 {cur.windKt} kt｜暴風半徑 {cur.galeRadiusKm} km
           </span>
         </div>
+      </div>
+
+      {/* 預報員解讀（白話摘要）*/}
+      <div className={`rounded-lg border p-2 ${threatColor}`}>
+        <div className="mb-1 flex items-center gap-1 text-[11px] font-bold">
+          <span>👮</span> 預報員解讀
+        </div>
+        <p className="text-[11px] leading-relaxed">{brief.headline}</p>
+        <p className="mt-1 text-[11px] font-semibold">👉 {brief.advice}</p>
       </div>
 
       {/* 警報推估（海警/陸警最快時機）*/}
@@ -80,7 +99,8 @@ export function TyphoonControls() {
       {ty.demo ? (
         <p className="rounded-md bg-slate-800/60 px-2 py-1.5 text-[10px] leading-relaxed text-slate-400">
           目前顯示<b className="text-slate-300">示範颱風</b>（GDACS 免金鑰查無活躍颱風，或解析失敗）。
-          要接<b className="text-slate-300">中央氣象署官方路徑＋暴風半徑</b>最準：⚙️ 設定填「Worker 網址」+「CWA 授權碼」，並重新部署 worker.js。
+          有填 <b className="text-slate-300">CWA 授權碼</b>會優先抓中央氣象署官方路徑（免 Worker，直接連）；
+          若你的網路擋 CORS 才需 Worker 代理。
         </p>
       ) : (
         <p className="rounded-md border border-tactical-green/30 bg-tactical-green/5 px-2 py-1.5 text-[10px] leading-relaxed text-tactical-green">

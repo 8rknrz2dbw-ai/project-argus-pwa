@@ -1,36 +1,61 @@
 // ── 中央氣象署 (CWA) Open Data 介接 ─────────────────────────
 //
-// CWA Open Data API 沒有 CORS，且授權碼不宜暴露在瀏覽器，因此一律透過
-// 已部署的 Cloudflare Worker 代理（同一支 edgeAiUrl，POST 帶 cwaDataset）。
-// Worker 端注入/轉送授權碼後打 CWA，回傳 JSON。
+// 取得順序：① 瀏覽器「直連」CWA opendata（多數情況允許 CORS，只需授權碼、
+// 免部署 Worker）→ ② 若直連被擋(CORS/網路)且有設 Worker，改走 Worker 代理。
+// 這樣使用者只要有 CWA 授權碼，通常就能直接用官方資料。
 //
-// 目前接：颱風路徑潛勢預報 W-C0034-005（取代示範颱風）。
+// 目前接：颱風路徑潛勢預報 W-C0034-005、潮汐 F-A0021-001、海面 F-A0012-001。
 
 import { getConfig } from './config'
 import { catOf, type Typhoon, type TyphoonPoint } from './typhoon'
 
-/** 透過 Worker 代理呼叫 CWA datastore，回傳原始 JSON。 */
+const CWA_BASE = 'https://opendata.cwa.gov.tw/api/v1/rest/datastore'
+
+/** 取得 CWA datastore JSON：先直連，失敗再走 Worker 代理。 */
 export async function fetchCwaJson(
   dataset: string,
   params: Record<string, string> = {},
 ): Promise<any> {
   const cfg = getConfig()
-  if (!cfg.edgeAiUrl) throw new Error('需先設定邊緣 Worker 網址')
   if (!cfg.cwaKey) throw new Error('需先設定 CWA 授權碼')
-  const ctrl = new AbortController()
-  const timeout = setTimeout(() => ctrl.abort(), 12000)
+
+  // ① 瀏覽器直連（免 Worker）
   try {
-    const res = await fetch(cfg.edgeAiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ cwaDataset: dataset, cwaKey: cfg.cwaKey, cwaParams: params }),
-      signal: ctrl.signal,
-    })
-    if (!res.ok) throw new Error(`Worker/CWA ${res.status}`)
-    return await res.json()
-  } finally {
-    clearTimeout(timeout)
+    const p = new URLSearchParams({ Authorization: cfg.cwaKey, format: 'JSON', ...params })
+    const ctrl = new AbortController()
+    const t = setTimeout(() => ctrl.abort(), 12000)
+    try {
+      const res = await fetch(`${CWA_BASE}/${dataset}?${p}`, {
+        headers: { accept: 'application/json' },
+        signal: ctrl.signal,
+      })
+      if (res.ok) return await res.json()
+    } finally {
+      clearTimeout(t)
+    }
+  } catch {
+    // 直連失敗（多半 CORS）→ 往下試 Worker
   }
+
+  // ② Worker 代理（若有設定）
+  if (cfg.edgeAiUrl) {
+    const ctrl = new AbortController()
+    const t = setTimeout(() => ctrl.abort(), 12000)
+    try {
+      const res = await fetch(cfg.edgeAiUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ cwaDataset: dataset, cwaKey: cfg.cwaKey, cwaParams: params }),
+        signal: ctrl.signal,
+      })
+      if (res.ok) return await res.json()
+      throw new Error(`Worker/CWA ${res.status}`)
+    } finally {
+      clearTimeout(t)
+    }
+  }
+
+  throw new Error('CWA 連線失敗（直連被擋且未設 Worker）')
 }
 
 const MS_TO_KT = 1.94384
