@@ -63,14 +63,9 @@ export function RescueLayer({ map }: { map: L.Map }) {
       debounceRef.current = setTimeout(refreshField, 700)
     }
 
-    const onClick = async (e: L.LeafletMouseEvent) => {
-      const { lat, lng } = e.latlng
-      setManOverboard({ lat, lng })
-      setRescueStatus('loading')
-      setStatus('已標記落海點，讀取海象中…')
-      // 只抓海象並存起來；漂流計算與繪製交給下方 effect（依物體類型 leeway）。
-      const env = await fetchEnvAt(lat, lng)
-      setRescueResult(env, [])
+    // 點地圖只設標記點；海象抓取交給下方 effect（點選或手動輸入座標都適用）。
+    const onClick = (e: L.LeafletMouseEvent) => {
+      setManOverboard({ lat: e.latlng.lat, lng: e.latlng.lng })
     }
 
     map.on('moveend', onMoveEnd)
@@ -105,6 +100,25 @@ export function RescueLayer({ map }: { map: L.Map }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
+
+  // ── 標記點一變（點選或手動輸入）就抓該點海象；必要時把地圖移過去 ──
+  useEffect(() => {
+    if (mode !== 'rescue' || !manOverboard) return
+    let cancelled = false
+    setRescueStatus('loading')
+    setStatus('已標記位置，讀取海象中…')
+    // 若標記點在畫面外（多半是手動輸入座標），把地圖移過去。
+    if (!map.getBounds().contains([manOverboard.lat, manOverboard.lng])) {
+      map.setView([manOverboard.lat, manOverboard.lng], Math.max(map.getZoom(), 8))
+    }
+    fetchEnvAt(manOverboard.lat, manOverboard.lng).then((env) => {
+      if (!cancelled) setRescueResult(env, [])
+    })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, manOverboard])
 
   // ── 漂流計算：落海點 / 海象 / 物體類型(leeway) 任一改變就重算重畫 ──
   useEffect(() => {
