@@ -49,6 +49,10 @@ interface TacticalState {
   // ── AIS 船舶識別 (ais) ──────────────────────────────
   vessels: Vessel[]
 
+  // ── 海況熱力圖 (seastate) ────────────────────────────
+  /** 熱力圖顯示哪個欄位：海溫或浪高。 */
+  seaStateField: 'sst' | 'wave'
+
   // ── 我的位置 (GPS，跨模式保留) ──────────────────────
   ownPosition: { lat: number; lng: number; accuracy: number } | null
 
@@ -69,6 +73,7 @@ interface TacticalState {
   setRescueStatus: (s: TacticalState['rescueStatus']) => void
   setVessels: (v: Vessel[]) => void
   setOwnPosition: (p: TacticalState['ownPosition']) => void
+  setSeaStateField: (f: 'sst' | 'wave') => void
   setScrubHours: (h: number) => void
   setDriftTarget: (id: string, leeway: number) => void
   setDriftPoints: (points: DriftPoint[]) => void
@@ -96,6 +101,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   driftTargetId: 'piw',
   driftMode: 'forward',
   vessels: [],
+  seaStateField: 'sst',
   ownPosition: null,
   statusMessage: '軌道預警模式待命中',
 
@@ -133,6 +139,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setRescueStatus: (s) => set({ rescueStatus: s }),
   setVessels: (v) => set({ vessels: v }),
   setOwnPosition: (p) => set({ ownPosition: p }),
+  setSeaStateField: (f) => set({ seaStateField: f }),
   setScrubHours: (h) => set({ scrubHours: h }),
   setDriftTarget: (id, leeway) => set({ driftTargetId: id, driftLeeway: leeway }),
   setDriftPoints: (points) => set({ driftPoints: points }),
@@ -145,4 +152,5 @@ const MODE_HINT: Record<TacticalMode, string> = {
   optical: '岸際光學模式：Sentinel-2 光學影像',
   ais: 'AIS 船舶識別模式：即時船位載入中',
   rescue: '搜救推演模式：點地圖標記落海點，計算漂流',
+  seastate: '海況熱力圖模式：載入海溫/浪高分佈',
 }

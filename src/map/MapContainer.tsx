@@ -5,6 +5,7 @@ import { LayerControl } from './LayerControl'
 import { BBoxSelector } from './BBoxSelector'
 import { AisLayer } from './AisLayer'
 import { RescueLayer } from './RescueLayer'
+import { SeaStateLayer } from './SeaStateLayer'
 import { LocateControl } from './LocateControl'
 import { OfflineControl } from './OfflineControl'
 
@@ -57,6 +58,7 @@ export function MapContainer() {
       {map && <BBoxSelector map={map} />}
       {map && <AisLayer map={map} />}
       {map && <RescueLayer map={map} />}
+      {map && <SeaStateLayer map={map} />}
       {map && <LocateControl map={map} />}
       {map && <OfflineControl map={map} />}
     </div>

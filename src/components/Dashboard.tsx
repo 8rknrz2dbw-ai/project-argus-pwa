@@ -4,6 +4,7 @@ import { OpticalControls } from './OpticalControls'
 import { SarControls } from './SarControls'
 import { AisControls } from './AisControls'
 import { RescueControls } from './RescueControls'
+import { SeaStateControls } from './SeaStateControls'
 
 /**
  * Dashboard —— 底部（手機）/ 左側（平板以上）的控制面板。
@@ -21,6 +22,7 @@ export function Dashboard() {
           {mode === 'sar' && <SarControls />}
           {mode === 'ais' && <AisControls />}
           {mode === 'rescue' && <RescueControls />}
+          {mode === 'seastate' && <SeaStateControls />}
         </div>
 
         {/* 戰術模式按鈕：永遠可見 */}

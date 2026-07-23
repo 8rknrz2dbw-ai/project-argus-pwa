@@ -16,6 +16,8 @@ export interface MarineEnv {
   currentDir: number
   /** 浪高 m */
   waveHeight: number
+  /** 海表溫度 °C */
+  sst: number
   /** 資料是否為即時抓取（false = 用了離線 fallback）。 */
   live: boolean
 }
@@ -25,7 +27,7 @@ const MARINE = 'https://marine-api.open-meteo.com/v1/marine'
 
 /** 海上網路不穩時的溫和預設值（輕微西南風、微弱北向流）。 */
 function fallback(lat: number, lng: number): MarineEnv {
-  return { lat, lng, windSpeed: 5, windDir: 225, currentSpeed: 0.3, currentDir: 20, waveHeight: 1, live: false }
+  return { lat, lng, windSpeed: 5, windDir: 225, currentSpeed: 0.3, currentDir: 20, waveHeight: 1, sst: 26, live: false }
 }
 
 async function getJson(url: string, signal: AbortSignal): Promise<any> {
@@ -40,7 +42,7 @@ export async function fetchEnvAt(lat: number, lng: number): Promise<MarineEnv> {
   const timeout = setTimeout(() => controller.abort(), 8000)
   try {
     const wUrl = `${WEATHER}?latitude=${lat}&longitude=${lng}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms`
-    const mUrl = `${MARINE}?latitude=${lat}&longitude=${lng}&current=ocean_current_velocity,ocean_current_direction,wave_height`
+    const mUrl = `${MARINE}?latitude=${lat}&longitude=${lng}&current=ocean_current_velocity,ocean_current_direction,wave_height,sea_surface_temperature`
     const [w, m] = await Promise.all([getJson(wUrl, controller.signal), getJson(mUrl, controller.signal)])
     return {
       lat,
@@ -50,6 +52,7 @@ export async function fetchEnvAt(lat: number, lng: number): Promise<MarineEnv> {
       currentSpeed: kmhToMs(num(m?.current?.ocean_current_velocity, 1.08)),
       currentDir: num(m?.current?.ocean_current_direction, 20),
       waveHeight: num(m?.current?.wave_height, 1),
+      sst: num(m?.current?.sea_surface_temperature, 26),
       live: true,
     }
   } catch {
@@ -71,7 +74,7 @@ export async function fetchEnvGrid(points: [number, number][]): Promise<MarineEn
   const lngs = points.map((p) => p[1].toFixed(4)).join(',')
   try {
     const wUrl = `${WEATHER}?latitude=${lats}&longitude=${lngs}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms`
-    const mUrl = `${MARINE}?latitude=${lats}&longitude=${lngs}&current=ocean_current_velocity,ocean_current_direction,wave_height`
+    const mUrl = `${MARINE}?latitude=${lats}&longitude=${lngs}&current=ocean_current_velocity,ocean_current_direction,wave_height,sea_surface_temperature`
     const [w, m] = await Promise.all([getJson(wUrl, controller.signal), getJson(mUrl, controller.signal)])
     const wArr = Array.isArray(w) ? w : [w]
     const mArr = Array.isArray(m) ? m : [m]
@@ -83,6 +86,7 @@ export async function fetchEnvGrid(points: [number, number][]): Promise<MarineEn
       currentSpeed: kmhToMs(num(mArr[i]?.current?.ocean_current_velocity, 1.08)),
       currentDir: num(mArr[i]?.current?.ocean_current_direction, 20),
       waveHeight: num(mArr[i]?.current?.wave_height, 1),
+      sst: num(mArr[i]?.current?.sea_surface_temperature, 26),
       live: true,
     }))
   } catch {
