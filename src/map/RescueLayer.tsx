@@ -102,14 +102,15 @@ export function RescueLayer({ map }: { map: L.Map }) {
       wind: { speed: rescueEnv.windSpeed, dirDeg: rescueEnv.windDir },
       current: { speed: rescueEnv.currentSpeed, dirDeg: rescueEnv.currentDir },
       leewayFactor: driftLeeway,
-      hoursList: [1, 3, 6],
+      // 落海可能是數小時前甚至一天前的事，預判到 24 小時。
+      hoursList: [1, 3, 6, 12, 24],
     })
     drawDrift(drift, manOverboard.lat, manOverboard.lng, points)
     setDriftPoints(points)
     setRescueStatus('done')
     const last = points[points.length - 1]
     setStatus(
-      `漂流預判：6h 後約在 ${bearingToText(last.bearingDeg)}方 ${(last.driftMeters / 1852).toFixed(1)} 浬，搜索半徑 ${(last.radiusMeters / 1852).toFixed(1)} 浬`,
+      `漂流預判：${last.hours}h 後約在 ${bearingToText(last.bearingDeg)}方 ${(last.driftMeters / 1852).toFixed(1)} 浬，搜索半徑 ${(last.radiusMeters / 1852).toFixed(1)} 浬`,
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, manOverboard, rescueEnv, driftLeeway])
