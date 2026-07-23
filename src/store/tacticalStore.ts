@@ -89,6 +89,10 @@ interface TacticalState {
 
   // ── AIS 船舶識別 (ais) ──────────────────────────────
   vessels: Vessel[]
+  /** 疊「VIIRS 夜間漁火」衛星圖層（免金鑰，看外海漁船燈光）。 */
+  showBoatLights: boolean
+  /** 疊「Sentinel-1 雷達暗船」圖層（需金鑰，看不廣播 AIS 的金屬船）。 */
+  showRadarVessels: boolean
 
   // ── 海況熱力圖 (seastate) ────────────────────────────
   /** 熱力圖顯示哪個欄位：海溫或浪高。 */
@@ -161,6 +165,8 @@ interface TacticalState {
   setRescueResult: (env: MarineEnv | null, points: DriftPoint[]) => void
   setRescueStatus: (s: TacticalState['rescueStatus']) => void
   setVessels: (v: Vessel[]) => void
+  setShowBoatLights: (b: boolean) => void
+  setShowRadarVessels: (b: boolean) => void
   setOwnPosition: (p: TacticalState['ownPosition']) => void
   toggleTrackRecording: () => void
   pushTrackPoint: (p: { lat: number; lng: number }) => void
@@ -232,6 +238,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   showSearchPattern: false,
   trackSpacingNm: 1,
   vessels: [],
+  showBoatLights: false,
+  showRadarVessels: false,
   seaStateField: 'sst',
   seaStateRange: null,
   activeTyphoon: null,
@@ -311,6 +319,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setRescueResult: (env, points) => set({ rescueEnv: env, driftPoints: points }),
   setRescueStatus: (s) => set({ rescueStatus: s }),
   setVessels: (v) => set({ vessels: v }),
+  setShowBoatLights: (b) => set({ showBoatLights: b }),
+  setShowRadarVessels: (b) => set({ showRadarVessels: b }),
   setOwnPosition: (p) => set({ ownPosition: p }),
   toggleTrackRecording: () =>
     set((st) => ({ trackRecording: !st.trackRecording, ownTrack: st.trackRecording ? st.ownTrack : [] })),
