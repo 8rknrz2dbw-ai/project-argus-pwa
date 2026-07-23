@@ -115,6 +115,34 @@ export class SatelliteCanvasLayer extends L.Layer {
 
   private drawDot(ctx: CanvasRenderingContext2D, map: L.Map, sat: SatelliteState) {
     const p = map.latLngToContainerPoint([sat.lat, sat.lng])
+    const w = this.canvas!.width
+    const h = this.canvas!.height
+    const margin = 26
+
+    // 衛星在畫面外 → 在最近的邊緣畫「指示箭頭 + 代號」，讓使用者知道它在哪個方向。
+    if (p.x < 0 || p.y < 0 || p.x > w || p.y > h) {
+      const cx = w / 2
+      const cy = h / 2
+      const ex = Math.max(margin, Math.min(w - margin, p.x))
+      const ey = Math.max(margin, Math.min(h - margin, p.y))
+      const ang = Math.atan2(p.y - cy, p.x - cx)
+      ctx.save()
+      ctx.translate(ex, ey)
+      ctx.rotate(ang)
+      ctx.beginPath()
+      ctx.moveTo(8, 0)
+      ctx.lineTo(-4, -5)
+      ctx.lineTo(-4, 5)
+      ctx.closePath()
+      ctx.fillStyle = 'rgba(52,211,153,0.9)'
+      ctx.fill()
+      ctx.restore()
+      ctx.font = '9px ui-monospace, monospace'
+      ctx.fillStyle = '#34d399'
+      ctx.fillText(sat.id, ex - 8, ey - 8)
+      return
+    }
+
     // 光暈
     ctx.beginPath()
     ctx.arc(p.x, p.y, 6, 0, Math.PI * 2)

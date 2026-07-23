@@ -113,7 +113,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   mode: 'orbit',
   maxCloudCover: 20,
   observationDate: today,
-  opticalSource: 'nasa',
+  opticalSource: 'esri',
   detections: null,
   aiStatus: 'idle',
   aiError: null,

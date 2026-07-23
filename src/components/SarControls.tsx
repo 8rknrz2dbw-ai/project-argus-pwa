@@ -36,10 +36,14 @@ export function SarControls() {
         </span>
       </div>
 
+      <p className="text-[10px] leading-relaxed text-slate-500">
+        框選海域即可用「示範 AI」找出疑似船隻——不用設定就能玩。
+      </p>
       {!isEdgeAiConfigured() && (
         <p className="text-[10px] leading-relaxed text-amber-500/80">
-          ⚠ 未設定 VITE_EDGE_AI_URL，目前使用本機 mock 偵測。部署 Cloudflare Worker
-          後填入即可接真實邊緣 AI。
+          目前為<b>示範 AI 偵測</b>（免設定）。想接<b>真實 AI</b>需先用電腦部署
+          Cloudflare Worker，再到右上 <b>⚙️ 設定 → 「邊緣 AI Worker 網址」</b>貼上網址。
+          屬進階選配，沒有也能用示範。
         </p>
       )}
     </div>
