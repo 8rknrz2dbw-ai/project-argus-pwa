@@ -8,13 +8,18 @@
 // （白浪、反光也可能中）。真正確認仍需雷達(Sentinel-1)或就近目視。
 
 export interface BrightSpot {
-  /** 畫面像素座標（相對傳入影像）。 */
+  /** 畫面像素座標（相對傳入影像，中心）。 */
   x: number
   y: number
   /** 團塊大小（取樣格數）。 */
   size: number
   /** 亮度離群分數（越高越突出）。 */
   score: number
+  /** 邊界框（畫面像素）。 */
+  minX: number
+  minY: number
+  maxX: number
+  maxY: number
 }
 
 export interface ScanOpts {
@@ -118,6 +123,10 @@ export function detectBrightSpots(img: ImageData, opt: ScanOpts = {}): BrightSpo
     let sy = 0
     let sc = 0
     let maxv = 0
+    let bMinX = gw
+    let bMaxX = 0
+    let bMinY = gh
+    let bMaxY = 0
     while (stack.length) {
       const j = stack.pop() as number
       const jx = j % gw
@@ -125,6 +134,10 @@ export function detectBrightSpots(img: ImageData, opt: ScanOpts = {}): BrightSpo
       sx += jx
       sy += jy
       sc++
+      if (jx < bMinX) bMinX = jx
+      if (jx > bMaxX) bMaxX = jx
+      if (jy < bMinY) bMinY = jy
+      if (jy > bMaxY) bMaxY = jy
       if (L[j] > maxv) maxv = L[j]
       for (const [dx, dy] of nbr) {
         const nx = jx + dx
@@ -143,6 +156,10 @@ export function detectBrightSpots(img: ImageData, opt: ScanOpts = {}): BrightSpo
       y: (sy / sc) * step,
       size: sc,
       score: (maxv - mean) / (std || 1),
+      minX: bMinX * step,
+      minY: bMinY * step,
+      maxX: (bMaxX + 1) * step,
+      maxY: (bMaxY + 1) * step,
     })
   }
   spots.sort((a, b) => b.score - a.score)

@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import { useTacticalStore } from '../store/tacticalStore'
 import { detectBrightSpots } from '../lib/brightSpot'
+import { classifyBySize, matchAis, distM, type Detection } from '../lib/detection'
+import { isAisConfigured } from '../lib/config'
 
 /**
  * 亮點掃描圖層：把目前畫面上的衛星影像圖磚畫到離屏 canvas，做亮點偵測，
@@ -55,7 +57,7 @@ export function BrightSpotLayer({ map }: { map: L.Map }) {
       setStatus('此影像來源不支援畫面分析（跨網域）；請切到「高解析(Esri)」或「每日(NASA)」')
       return
     }
-    setStatus('亮點掃描中…')
+    setStatus('目標掃描中…')
     const spots = detectBrightSpots(data, {
       step: 2,
       kStd: sensitivity,
@@ -64,15 +66,37 @@ export function BrightSpotLayer({ map }: { map: L.Map }) {
       maxSize: 40,
       maxSpots: 60,
     })
-    const results = spots.map((s) => {
-      const ll = map.containerPointToLatLng(L.point(s.x, s.y))
-      return { lat: ll.lat, lng: ll.lng, score: s.score }
+    const vessels = useTacticalStore.getState().vessels
+    const aisOn = isAisConfigured()
+    const results: Detection[] = spots.map((s) => {
+      const c = map.containerPointToLatLng(L.point(s.x, s.y))
+      const sw = map.containerPointToLatLng(L.point(s.minX, s.maxY))
+      const ne = map.containerPointToLatLng(L.point(s.maxX, s.minY))
+      // 尺度：邊界框對角線的地理長度（公尺）
+      const sizeM = distM(sw.lat, sw.lng, ne.lat, ne.lng)
+      const m = matchAis(c.lat, c.lng, vessels, aisOn)
+      return {
+        lat: c.lat,
+        lng: c.lng,
+        score: s.score,
+        south: sw.lat,
+        west: sw.lng,
+        north: ne.lat,
+        east: ne.lng,
+        sizeM,
+        cls: classifyBySize(sizeM),
+        ais: m.ais,
+        aisName: m.aisName,
+      }
     })
     setBrightSpots(results)
+    const suspicious = results.filter((r) => r.ais === 'none').length
     setStatus(
       results.length
-        ? `亮點掃描：找到 ${results.length} 個疑似亮點（點記號看位置；白浪/反光也可能中）`
-        : '亮點掃描：此畫面沒有明顯亮點（可調高靈敏度或放大）',
+        ? aisOn
+          ? `目標掃描：${results.length} 個，其中 ⚠${suspicious} 個無 AIS（紅框優先查）`
+          : `目標掃描：${results.length} 個疑似目標（設定 AIS 後可自動比對「無AIS=可疑」）`
+        : '目標掃描：此畫面沒有明顯目標（可調高靈敏度或放大）',
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanTick])
@@ -84,17 +108,37 @@ export function BrightSpotLayer({ map }: { map: L.Map }) {
     g.clearLayers()
     if (mode !== 'optical') return
     brightSpots.forEach((s, i) => {
-      L.marker([s.lat, s.lng], {
+      // 無 AIS 訊號＝紅框(可疑)；有對到 AIS＝綠框(已知)；未比對＝青框。
+      const color = s.ais === 'none' ? '#f43f5e' : s.ais === 'known' ? '#34d399' : '#22d3ee'
+      const tag = s.ais === 'none' ? '⚠無AIS' : s.ais === 'known' ? `✓${s.aisName || 'AIS'}` : ''
+      // 至少 18px 的框，太小看不見
+      const sw = map.latLngToContainerPoint([s.south, s.west])
+      const ne = map.latLngToContainerPoint([s.north, s.east])
+      const padX = Math.max(0, (18 - Math.abs(ne.x - sw.x)) / 2)
+      const padY = Math.max(0, (18 - Math.abs(sw.y - ne.y)) / 2)
+      const p1 = map.containerPointToLatLng(L.point(Math.min(sw.x, ne.x) - padX, Math.max(sw.y, ne.y) + padY))
+      const p2 = map.containerPointToLatLng(L.point(Math.max(sw.x, ne.x) + padX, Math.min(sw.y, ne.y) - padY))
+      L.rectangle(
+        [
+          [p1.lat, p1.lng],
+          [p2.lat, p2.lng],
+        ],
+        { color, weight: 2, fill: false, className: s.ais === 'none' ? 'det-box-alert' : '' },
+      ).addTo(g)
+      L.marker([p2.lat, p1.lng], {
         icon: L.divIcon({
           className: '',
-          html: `<div class="bright-spot">${i + 1}</div>`,
-          iconSize: [22, 22],
-          iconAnchor: [11, 11],
+          html: `<div class="det-label" style="color:${color};border-color:${color}">${i + 1}${tag ? ' ' + tag : ''}</div>`,
+          iconSize: [80, 15],
+          iconAnchor: [-2, 15],
         }),
         zIndexOffset: 1400,
       })
         .bindPopup(
-          `<b style="color:#22d3ee">疑似亮點 #${i + 1}</b><br/>突出度 ${s.score.toFixed(1)}σ<br/>${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}<br/><span style="color:#94a3b8">輔助判讀，非確認為船</span>`,
+          `<b style="color:${color}">目標 #${i + 1}${tag ? '｜' + tag : ''}</b><br/>` +
+            `${s.cls}<br/>估計尺度 ~${Math.round(s.sizeM)} m｜突出度 ${s.score.toFixed(1)}σ<br/>` +
+            `${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}<br/>` +
+            `<span style="color:#94a3b8;font-size:11px">輔助分流，非確認身分</span>`,
         )
         .addTo(g)
     })
