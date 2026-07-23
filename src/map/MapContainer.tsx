@@ -11,6 +11,7 @@ import { TyphoonLayer } from './TyphoonLayer'
 import { LocateControl } from './LocateControl'
 import { OfflineControl } from './OfflineControl'
 import { TerritorialLayer, TerritorialToggle } from './TerritorialLayer'
+import { MapFlyTo } from './MapFlyTo'
 
 /**
  * MapContainer —— 唯一的地圖實體。
@@ -68,6 +69,7 @@ export function MapContainer() {
       {map && <OfflineControl map={map} />}
       {map && <TerritorialLayer map={map} />}
       {map && <TerritorialToggle />}
+      {map && <MapFlyTo map={map} />}
     </div>
   )
 }

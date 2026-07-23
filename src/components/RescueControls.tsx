@@ -343,12 +343,13 @@ export function RescueControls() {
         </div>
       )}
 
-      {/* 免費衛星最新過境查詢（以標記點為中心）*/}
+      {/* 免費衛星查詢（以標記點為中心、鎖定回報日期）*/}
       {mob && (
         <SatelliteQuickLinks
           lat={mob.lat}
           lng={mob.lng}
-          title="🛰️ 查此漂流位置的免費衛星影像"
+          date={new Date(incidentTime).toISOString().slice(0, 10)}
+          title="🛰️ 查此位置在回報當日的免費衛星影像"
         />
       )}
 

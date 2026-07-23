@@ -90,6 +90,9 @@ interface TacticalState {
   // ── 領海基線/鄰接區參考線（跨模式覆蓋層）────────────
   showTerritorial: boolean
 
+  // ── 地圖飛行目標（座標查詢用，設定後地圖飛過去再清空）────
+  flyToTarget: { lat: number; lng: number; zoom?: number } | null
+
   // ── 我的位置 (GPS，跨模式保留) ──────────────────────
   ownPosition: { lat: number; lng: number; accuracy: number } | null
 
@@ -111,6 +114,7 @@ interface TacticalState {
   setRescueStatus: (s: TacticalState['rescueStatus']) => void
   setVessels: (v: Vessel[]) => void
   setOwnPosition: (p: TacticalState['ownPosition']) => void
+  setFlyTo: (t: { lat: number; lng: number; zoom?: number } | null) => void
   setShowTerritorial: (v: boolean) => void
   setSeaStateField: (f: 'sst' | 'wave') => void
   setCwaTide: (t: TideEvent[] | null) => void
@@ -164,6 +168,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   animEpoch: 0,
   animPlaying: false,
   animTimes: [],
+  flyToTarget: null,
   ownPosition: null,
   showTerritorial: false,
   statusMessage: '軌道預警模式待命中',
@@ -213,6 +218,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setRescueStatus: (s) => set({ rescueStatus: s }),
   setVessels: (v) => set({ vessels: v }),
   setOwnPosition: (p) => set({ ownPosition: p }),
+  setFlyTo: (t) => set({ flyToTarget: t }),
   setShowTerritorial: (v) => set({ showTerritorial: v }),
   setSeaStateField: (f) => set({ seaStateField: f }),
   setCwaTide: (t) => set({ cwaTide: t }),
