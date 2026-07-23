@@ -1,12 +1,23 @@
 import { useTacticalStore } from '../store/tacticalStore'
-import { SST_LEGEND, WAVE_LEGEND } from '../lib/colorScale'
+import { SST_LEGEND, WAVE_LEGEND, sstColorDyn, waveColorDyn } from '../lib/colorScale'
 
 /** 海況模式控制項：海溫/浪高切換 + 色階圖例。 */
 export function SeaStateControls() {
   const field = useTacticalStore((s) => s.seaStateField)
   const setField = useTacticalStore((s) => s.setSeaStateField)
   const seaAreas = useTacticalStore((s) => s.cwaSeaAreas)
-  const legend = field === 'sst' ? SST_LEGEND : WAVE_LEGEND
+  const range = useTacticalStore((s) => s.seaStateRange)
+  const base = field === 'sst' ? SST_LEGEND : WAVE_LEGEND
+  // 動態色階：圖例的範圍與配色都對齊「此畫面實際範圍」，才和地圖一致。
+  const legend = range
+    ? {
+        min: range.min,
+        max: range.max,
+        unit: base.unit,
+        colorAt: (v: number) =>
+          field === 'sst' ? sstColorDyn(v, range.min, range.max, 1) : waveColorDyn(v, range.min, range.max, 1),
+      }
+    : base
 
   // 產生色條的漸層
   const steps = 24

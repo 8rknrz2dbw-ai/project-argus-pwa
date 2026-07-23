@@ -4,6 +4,7 @@ import { useTacticalStore } from '../store/tacticalStore'
 import { demoTyphoon, currentPoint, type Typhoon } from '../lib/typhoon'
 import { isCwaConfigured } from '../lib/config'
 import { fetchCwaTyphoon } from '../lib/cwa'
+import { fetchGdacsTyphoon } from '../lib/gdacs'
 
 /**
  * 颱風路徑圖層：現在位置（旋轉符號）+ 暴風圈 + 預報路徑 + 潛勢範圍錐 + 時間點。
@@ -13,6 +14,7 @@ import { fetchCwaTyphoon } from '../lib/cwa'
 export function TyphoonLayer({ map }: { map: L.Map }) {
   const mode = useTacticalStore((s) => s.mode)
   const setStatus = useTacticalStore((s) => s.setStatus)
+  const setActiveTyphoon = useTacticalStore((s) => s.setActiveTyphoon)
   const groupRef = useRef<L.LayerGroup | null>(null)
 
   useEffect(() => {
@@ -24,6 +26,7 @@ export function TyphoonLayer({ map }: { map: L.Map }) {
     const render = (ty: Typhoon) => {
       if (cancelled || !groupRef.current) return
       group.clearLayers()
+      setActiveTyphoon(ty)
       draw(group, ty)
       const cur = currentPoint(ty)
       map.setView([cur.lat + 1.5, cur.lng - 1.5], 6)
@@ -34,21 +37,27 @@ export function TyphoonLayer({ map }: { map: L.Map }) {
       )
     }
 
-    // 先畫示範，確保立即有畫面；有 CWA 設定則嘗試以真實資料覆蓋。
+    // 來源優先序：CWA(官方，需設定) → GDACS(免金鑰即時) → 示範。
     render(demoTyphoon())
-    if (isCwaConfigured()) {
-      setStatus('颱風路徑：讀取中央氣象署即時資料…')
-      fetchCwaTyphoon(Date.now())
-        .then((ty) => {
-          if (ty) render(ty)
-          else if (!cancelled)
-            setStatus('CWA 目前無颱風或資料格式不符，顯示示範颱風')
-        })
-        .catch(() => {})
+    setStatus('颱風路徑：查詢即時颱風資料…')
+    const load = async () => {
+      if (isCwaConfigured()) {
+        const cwa = await fetchCwaTyphoon(Date.now()).catch(() => null)
+        if (cwa) return render(cwa)
+      }
+      const gd = await fetchGdacsTyphoon().catch(() => null)
+      if (gd) {
+        render(gd)
+        if (!cancelled) setStatus(`颱風路徑（GDACS 即時）：${gd.name}｜完整路徑/警報建議設定 CWA`)
+        return
+      }
+      if (!cancelled) setStatus('目前西太平洋無活躍颱風資料，顯示示範颱風（設定 CWA 可得官方路徑）')
     }
+    load()
 
     return () => {
       cancelled = true
+      setActiveTyphoon(null)
       group.clearLayers()
       map.removeLayer(group)
       groupRef.current = null

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { getConfig, saveConfig, clearConfig, isCwaConfigured } from '../lib/config'
 import { fetchCwaJson } from '../lib/cwa'
+import { downloadBackup, restoreBackup } from '../lib/backup'
 
 /**
  * 設定面板：在 App 裡直接貼金鑰（存 localStorage），免去改 Vercel 環境變數
@@ -10,6 +11,8 @@ export function SettingsPanel() {
   const [open, setOpen] = useState(false)
   const [cfg, setCfg] = useState(getConfig())
 
+  const fileRef = useRef<HTMLInputElement>(null)
+
   const save = () => {
     saveConfig(cfg)
     location.reload() // 重載讓 WMS/AIS/AI 圖層讀到新金鑰
@@ -17,6 +20,19 @@ export function SettingsPanel() {
   const reset = () => {
     clearConfig()
     location.reload()
+  }
+  const doImport = (file: File) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const n = restoreBackup(String(reader.result))
+        alert(`已還原 ${n} 項設定/座標，將重新載入。`)
+        location.reload()
+      } catch (e) {
+        alert(`匯入失敗：${(e as Error).message}`)
+      }
+    }
+    reader.readAsText(file)
   }
 
   return (
@@ -43,10 +59,38 @@ export function SettingsPanel() {
               </button>
             </div>
 
-            <p className="mb-4 text-[11px] leading-relaxed text-slate-400">
+            <p className="mb-3 text-[11px] leading-relaxed text-slate-400">
               金鑰只存在你這支手機的瀏覽器裡，不會上傳。填了才啟用對應的真實資料；
-              留空則用內建模擬／示範。風、洋流、漂流預判本來就免金鑰。
+              留空則用內建模擬／示範。風、洋流、漂流預判、亮點掃描本來就免金鑰。
             </p>
+
+            {/* #6 這些欄位到底是什麼 */}
+            <details className="mb-3 rounded-lg border border-slate-700 bg-slate-900/40 p-2">
+              <summary className="cursor-pointer text-[11px] font-semibold text-tactical-cyan">
+                ❓ 這些欄位是什麼？要不要填？（點開說明）
+              </summary>
+              <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-4 text-[10px] leading-relaxed text-slate-400">
+                <li>
+                  <b className="text-slate-300">Sentinel Instance ID / WMS 位址</b>：歐洲太空總署
+                  Copernicus 免費帳號建立的「影像設定檔」。填了 → 岸際光學/雷達盲搜可用 10m
+                  Sentinel 影像。<b>不填也能用</b>免金鑰的 Esri/MODIS 影像。
+                </li>
+                <li>
+                  <b className="text-slate-300">AISStream 金鑰</b>：aisstream.io 免費申請。填了 →
+                  AIS 模式顯示<b>真實船位</b>、且亮點掃描能自動比對「無AIS＝可疑」。不填 → 用模擬船隊。
+                </li>
+                <li>
+                  <b className="text-slate-300">邊緣 AI Worker 網址</b>：你用電腦部署的
+                  Cloudflare Worker 網址（一段 https://…workers.dev）。它是<b>中繼站</b>，
+                  幫忙做雷達 AI 辨識、以及代理中央氣象署資料（因為氣象署擋瀏覽器直連）。
+                </li>
+                <li>
+                  <b className="text-slate-300">中央氣象署 CWA 授權碼</b>：opendata.cwa.gov.tw 免費會員的授權碼。
+                  搭配上面 Worker → <b>颱風即時路徑、潮汐、海面預報</b>用官方資料。
+                </li>
+                <li>全部留空，App 一樣能操作，只是用免金鑰/示範資料。詳細申請步驟見 SETUP_KEYS.md。</li>
+              </ul>
+            </details>
 
             <Field
               label="🛰️ Sentinel Hub Instance ID"
@@ -85,6 +129,40 @@ export function SettingsPanel() {
             />
 
             {isCwaConfigured() && <CwaProbe />}
+
+            {/* #5 匯出 / 匯入 備份 */}
+            <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/40 p-2">
+              <div className="mb-1 text-[11px] font-semibold text-tactical-green">💾 備份 / 還原</div>
+              <p className="mb-2 text-[10px] leading-relaxed text-slate-500">
+                把設定＋最愛/釘選座標＋歷史打包成一個 JSON 檔（iOS/Android 都能開）。
+                換手機或重灌時，用「匯入」讀回這個檔就全部還原。
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => downloadBackup(new Date().toISOString())}
+                  className="flex-1 rounded border border-tactical-green/50 bg-tactical-green/10 py-2 text-xs font-bold text-tactical-green active:scale-95"
+                >
+                  📤 匯出備份檔
+                </button>
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="flex-1 rounded border border-tactical-cyan/50 bg-tactical-cyan/10 py-2 text-xs font-bold text-tactical-cyan active:scale-95"
+                >
+                  📥 匯入還原（選檔）
+                </button>
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/json,.json"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) doImport(f)
+                  e.target.value = ''
+                }}
+              />
+            </div>
 
             <div className="mt-4 flex gap-2">
               <button

@@ -15,6 +15,7 @@ import { MapFlyTo } from './MapFlyTo'
 import { BrightSpotLayer } from './BrightSpotLayer'
 import { SavedCoordsLayer } from './SavedCoordsLayer'
 import { MeasureLayer } from './MeasureLayer'
+import { MapInfoBar } from '../components/MapInfoBar'
 
 /**
  * MapContainer —— 唯一的地圖實體。
@@ -76,6 +77,7 @@ export function MapContainer() {
       {map && <BrightSpotLayer map={map} />}
       {map && <SavedCoordsLayer map={map} />}
       {map && <MeasureLayer map={map} />}
+      {map && <MapInfoBar map={map} />}
     </div>
   )
 }
