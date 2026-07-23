@@ -23,7 +23,7 @@ export function TyphoonLayer({ map }: { map: L.Map }) {
     groupRef.current = group
     let cancelled = false
 
-    const render = (ty: Typhoon) => {
+    const render = (ty: Typhoon, source: 'cwa' | 'gdacs' | 'demo') => {
       if (cancelled || !groupRef.current) return
       group.clearLayers()
       setActiveTyphoon(ty)
@@ -31,27 +31,26 @@ export function TyphoonLayer({ map }: { map: L.Map }) {
       const cur = currentPoint(ty)
       map.setView([cur.lat + 1.5, cur.lng - 1.5], 6)
       setStatus(
-        ty.demo
-          ? '颱風路徑（示範）：紅=暴風圈、虛線=預報路徑、錐形=潛勢範圍'
-          : `颱風路徑（CWA 即時）：${ty.name}｜紅=暴風圈、虛線=預報路徑`,
+        source === 'demo'
+          ? '颱風路徑（示範）：目前查無活躍颱風資料'
+          : source === 'cwa'
+            ? `颱風路徑（中央氣象署 CWA 官方）：${ty.name}`
+            : `颱風路徑（GDACS 即時）：${ty.name}｜官方命名/警報請設定 CWA`,
       )
     }
 
-    // 來源優先序：CWA(官方，需設定) → GDACS(免金鑰即時) → 示範。
-    render(demoTyphoon())
-    setStatus('颱風路徑：查詢即時颱風資料…')
+    // 不先畫示範（避免「示範→即時」閃跳）。查詢中先顯示載入訊息，
+    // 有真實資料才畫；CWA(官方) 優先 → GDACS(即時) → 都沒有才退示範。
+    setActiveTyphoon(null)
+    setStatus('颱風路徑：查詢即時颱風資料中…')
     const load = async () => {
       if (isCwaConfigured()) {
         const cwa = await fetchCwaTyphoon(Date.now()).catch(() => null)
-        if (cwa) return render(cwa)
+        if (cwa && !cancelled) return render(cwa, 'cwa')
       }
       const gd = await fetchGdacsTyphoon().catch(() => null)
-      if (gd) {
-        render(gd)
-        if (!cancelled) setStatus(`颱風路徑（GDACS 即時）：${gd.name}｜完整路徑/警報建議設定 CWA`)
-        return
-      }
-      if (!cancelled) setStatus('目前西太平洋無活躍颱風資料，顯示示範颱風（設定 CWA 可得官方路徑）')
+      if (gd && !cancelled) return render(gd, 'gdacs')
+      if (!cancelled) render(demoTyphoon(), 'demo')
     }
     load()
 

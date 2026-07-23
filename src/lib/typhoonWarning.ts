@@ -40,6 +40,48 @@ export interface WarningEstimate {
 
 const SEA_BUFFER_KM = 100
 
+export interface WarningVerdict {
+  level: 'none' | 'watch' | 'issue' | 'active'
+  text: string
+}
+export interface CoastGuardVerdict {
+  sea: WarningVerdict
+  land: WarningVerdict
+  /** 海巡作業建議（取較高等級）。 */
+  advice: string
+  /** 整體最高等級。 */
+  top: 'none' | 'watch' | 'issue' | 'active'
+}
+
+const RANK: Record<WarningVerdict['level'], number> = { none: 0, watch: 1, issue: 2, active: 3 }
+
+/**
+ * 以中央氣象署發布準則研判（海巡角度）：
+ *   海上警報：7級暴風圈預計 24h 內侵襲台灣近海(100km) → 發布。
+ *   陸上警報：7級暴風圈預計 18h 內侵襲陸地 → 發布。
+ */
+export function coastGuardVerdict(w: WarningEstimate): CoastGuardVerdict {
+  const sea = verdict(w.seaHours, 24, '海上')
+  const land = verdict(w.landHours, 18, '陸上')
+  const top = RANK[sea.level] >= RANK[land.level] ? sea.level : land.level
+  const advice =
+    top === 'active'
+      ? '暴風圈影響中：船艇即刻進港避風、離岸作業人員撤回、加強沿海戒備與救難待命。'
+      : top === 'issue'
+        ? '達警報發布時機：通知轄區船筏進港、掌握在外船位、整備救難能量、加強巡邏。'
+        : top === 'watch'
+          ? '尚未達發布時機但需戒備：預劃避風港、清點裝備、持續掌握動態。'
+          : '研判暫不影響台灣海域，維持正常勤務並持續追蹤。'
+  return { sea, land, advice, top }
+}
+
+function verdict(hours: number | null, issueLeadH: number, label: string): WarningVerdict {
+  if (hours === null) return { level: 'none', text: `研判暫不影響台灣${label === '海上' ? '近海' : '陸地'}` }
+  if (hours <= 0) return { level: 'active', text: `暴風圈已影響（達${label}警報等級）` }
+  if (hours <= issueLeadH) return { level: 'issue', text: `建議發布${label}警報（約 ${hours}h 後侵襲）` }
+  return { level: 'watch', text: `約 ${hours}h 後才侵襲，尚未達${label}警報發布時機（持續監控）` }
+}
+
 export function estimateWarnings(ty: Typhoon): WarningEstimate {
   const pts = ty.track.filter((p) => p.hours >= 0)
   let seaHours: number | null = null

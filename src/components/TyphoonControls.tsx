@@ -1,21 +1,51 @@
-import { demoTyphoon, currentPoint } from '../lib/typhoon'
+import { currentPoint } from '../lib/typhoon'
 import { isCwaConfigured } from '../lib/config'
-import { estimateWarnings } from '../lib/typhoonWarning'
+import { estimateWarnings, coastGuardVerdict } from '../lib/typhoonWarning'
 import { typhoonBrief } from '../lib/typhoonBrief'
 import { useTacticalStore } from '../store/tacticalStore'
 
+/** 名稱是否為「國際編號/尚未命名」(如 ELEVEN-26、TD、INVEST 91W)。 */
+function isDesignation(name: string): boolean {
+  return /^[A-Za-z0-9\s-]+$/.test(name) || /TD|INVEST|^\d/.test(name)
+}
+
+const VERDICT_STYLE: Record<string, string> = {
+  active: 'text-rose-300',
+  issue: 'text-orange-300',
+  watch: 'text-amber-300',
+  none: 'text-slate-400',
+}
+
 /**
- * 颱風路徑控制面板：顯示目前颱風（CWA/GDACS/示範）的資訊、預報摘要、
- * 以及依路徑推估的海警/陸警最快時機。
+ * 颱風路徑控制面板：預報員解讀 + 海巡角度的海警/陸警研判告警 + 預報摘要。
  */
 export function TyphoonControls() {
   const active = useTacticalStore((s) => s.activeTyphoon)
-  const ty = active ?? demoTyphoon()
+  const cwa = isCwaConfigured()
+
+  // 查詢中（尚未取得任何颱風資料）：顯示載入，不先塞示範。
+  if (!active) {
+    return (
+      <div className="flex flex-col gap-2 rounded-lg border border-slate-700 bg-tactical-panel/90 p-3">
+        <div className="flex items-center gap-2 text-slate-300">
+          <span className="animate-spin text-xl">🌀</span>
+          <span className="text-sm font-semibold">查詢即時颱風資料中…</span>
+        </div>
+        <p className="text-[10px] text-slate-500">
+          優先抓中央氣象署 (CWA) 官方；無 Taiwan 相關颱風時改用 GDACS 全球即時。
+        </p>
+      </div>
+    )
+  }
+
+  const ty = active
   const cur = currentPoint(ty)
   const future = ty.track.filter((p) => p.hours > 0)
-  const cwa = isCwaConfigured()
   const warn = estimateWarnings(ty)
+  const cg = coastGuardVerdict(warn)
   const brief = typhoonBrief(ty)
+  const designation = !ty.demo && isDesignation(ty.name)
+
   const threatColor =
     brief.threat === 'extreme'
       ? 'border-rose-500/60 bg-rose-500/10 text-rose-200'
@@ -24,15 +54,14 @@ export function TyphoonControls() {
         : brief.threat === 'mid'
           ? 'border-amber-500/40 bg-amber-500/10 text-amber-200'
           : 'border-slate-600 bg-slate-800/50 text-slate-300'
-
-  const now = Date.now()
-  const etaText = (h: number | null) => {
-    if (h === null) return '推估不直接影響'
-    if (h <= 0) return '⚠ 已影響中'
-    const d = new Date(now + h * 3600000)
-    const clock = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:00`
-    return `最快 +${h}h（約 ${clock}）`
-  }
+  const cgBanner =
+    cg.top === 'active'
+      ? 'border-rose-500/60 bg-rose-500/15 text-rose-200'
+      : cg.top === 'issue'
+        ? 'border-orange-500/60 bg-orange-500/15 text-orange-200'
+        : cg.top === 'watch'
+          ? 'border-amber-500/50 bg-amber-500/10 text-amber-200'
+          : 'border-tactical-green/40 bg-tactical-green/5 text-tactical-green'
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-slate-700 bg-tactical-panel/90 p-3">
@@ -41,7 +70,9 @@ export function TyphoonControls() {
         <div className="flex flex-col">
           <span className="text-base font-bold text-rose-400">
             {ty.name}{' '}
-            <span className="text-xs font-normal text-slate-400">{ty.demo ? 'DEMO' : ty.nameEn}</span>
+            <span className="text-xs font-normal text-slate-400">
+              {ty.demo ? 'DEMO' : designation ? '國際編號' : ty.nameEn}
+            </span>
           </span>
           <span className="text-[11px] text-slate-400">
             {cur.cat}｜近中心風 {cur.windKt} kt｜暴風半徑 {cur.galeRadiusKm} km
@@ -58,24 +89,23 @@ export function TyphoonControls() {
         <p className="mt-1 text-[11px] font-semibold">👉 {brief.advice}</p>
       </div>
 
-      {/* 警報推估（海警/陸警最快時機）*/}
-      <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-2">
-        <div className="mb-1 text-[11px] font-semibold text-amber-400">⚠ 對台灣影響推估（依路徑）</div>
-        <div className="flex flex-col gap-0.5 text-[11px]">
-          <div className="flex justify-between">
-            <span className="text-sky-300">🌊 海上警報</span>
-            <span className={`font-mono ${warn.seaHours != null ? 'text-sky-200' : 'text-slate-500'}`}>
-              {etaText(warn.seaHours)}
-            </span>
+      {/* 海巡角度 · 警報研判告警 */}
+      <div className={`rounded-lg border p-2 ${cgBanner}`}>
+        <div className="mb-1 text-[11px] font-bold">🛟 海巡研判 · 本國警報告警（依路徑推估）</div>
+        <div className="flex flex-col gap-1 text-[11px]">
+          <div className="flex items-start justify-between gap-2">
+            <span className="shrink-0 text-sky-300">🌊 海上警報</span>
+            <span className={`text-right ${VERDICT_STYLE[cg.sea.level]}`}>{cg.sea.text}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-rose-300">🏝 陸上警報</span>
-            <span className={`font-mono ${warn.landHours != null ? 'text-rose-200' : 'text-slate-500'}`}>
-              {etaText(warn.landHours)}
-            </span>
+          <div className="flex items-start justify-between gap-2">
+            <span className="shrink-0 text-rose-300">🏝 陸上警報</span>
+            <span className={`text-right ${VERDICT_STYLE[cg.land.level]}`}>{cg.land.text}</span>
           </div>
-          <div className="mt-0.5 text-[9px] text-slate-500">
-            暴風圈邊緣距海岸最近約 {Math.round(warn.closestGapKm)} km｜推估非官方，以中央氣象署發布為準
+          <p className="mt-1 rounded bg-black/20 px-2 py-1 text-[11px] font-semibold leading-relaxed">
+            🚔 {cg.advice}
+          </p>
+          <div className="text-[9px] text-slate-500">
+            暴風圈邊緣距海岸最近約 {Math.round(warn.closestGapKm)} km｜研判非官方，實際以中央氣象署發布為準
           </div>
         </div>
       </div>
@@ -98,14 +128,13 @@ export function TyphoonControls() {
 
       {ty.demo ? (
         <p className="rounded-md bg-slate-800/60 px-2 py-1.5 text-[10px] leading-relaxed text-slate-400">
-          目前顯示<b className="text-slate-300">示範颱風</b>（GDACS 免金鑰查無活躍颱風，或解析失敗）。
-          有填 <b className="text-slate-300">CWA 授權碼</b>會優先抓中央氣象署官方路徑（免 Worker，直接連）；
-          若你的網路擋 CORS 才需 Worker 代理。
+          目前查無活躍颱風，顯示<b className="text-slate-300">示範</b>。有活躍颱風時會優先用
+          <b className="text-slate-300">中央氣象署 CWA 命名（中文）</b>，其次 GDACS 國際編號。
         </p>
       ) : (
         <p className="rounded-md border border-tactical-green/30 bg-tactical-green/5 px-2 py-1.5 text-[10px] leading-relaxed text-tactical-green">
-          ✓ 即時颱風資料：{cwa ? '中央氣象署 (CWA)' : 'GDACS 免金鑰'}。
-          {!cwa && ' 想要完整預報路徑與官方警報，建議設定 CWA。'}
+          ✓ 即時資料：{cwa && !designation ? '中央氣象署 (CWA) 官方命名' : 'GDACS 全球即時'}。
+          {designation && '（此系統中央氣象署尚未命名／非台灣近海，命名後會自動改用中文名）'}
         </p>
       )}
     </div>
