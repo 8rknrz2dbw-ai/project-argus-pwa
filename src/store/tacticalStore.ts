@@ -109,6 +109,10 @@ interface TacticalState {
   // ── 地圖飛行目標（座標查詢用，設定後地圖飛過去再清空）────
   flyToTarget: { lat: number; lng: number; zoom?: number } | null
 
+  // ── 量測工具（距離/方位，跨模式）──────────────────────
+  measuring: boolean
+  measurePoints: { lat: number; lng: number }[]
+
   // ── 座標管理：已存(最愛/釘選) + 歷史（localStorage 持久化）──
   savedCoords: SavedCoord[]
   coordHistory: HistItem[]
@@ -145,6 +149,9 @@ interface TacticalState {
   updateSavedCoord: (id: string, patch: Partial<SavedCoord>) => void
   removeSavedCoord: (id: string) => void
   clearHistory: () => void
+  toggleMeasure: () => void
+  addMeasurePoint: (p: { lat: number; lng: number }) => void
+  clearMeasure: () => void
   setShowTerritorial: (v: boolean) => void
   setSeaStateField: (f: 'sst' | 'wave') => void
   setCwaTide: (t: TideEvent[] | null) => void
@@ -204,6 +211,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   flyToTarget: null,
   savedCoords: loadSaved(),
   coordHistory: loadHistory(),
+  measuring: false,
+  measurePoints: [],
   ownPosition: null,
   showTerritorial: false,
   statusMessage: '軌道預警模式待命中',
@@ -297,6 +306,10 @@ export const useTacticalStore = create<TacticalState>((set) => ({
       persistHistory([])
       return { coordHistory: [] }
     }),
+  toggleMeasure: () =>
+    set((st) => ({ measuring: !st.measuring, measurePoints: st.measuring ? st.measurePoints : [] })),
+  addMeasurePoint: (p) => set((st) => ({ measurePoints: [...st.measurePoints, p] })),
+  clearMeasure: () => set({ measurePoints: [] }),
   setShowTerritorial: (v) => set({ showTerritorial: v }),
   setSeaStateField: (f) => set({ seaStateField: f }),
   setCwaTide: (t) => set({ cwaTide: t }),

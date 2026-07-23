@@ -3,6 +3,7 @@ import { Dashboard } from './components/Dashboard'
 import { StatusBar } from './components/StatusBar'
 import { SettingsPanel } from './components/SettingsPanel'
 import { CoordManager } from './components/CoordManager'
+import { MeasureControl } from './components/MeasureControl'
 
 export default function App() {
   return (
@@ -11,6 +12,7 @@ export default function App() {
       <StatusBar />
       <SettingsPanel />
       <CoordManager />
+      <MeasureControl />
       <Dashboard />
     </div>
   )
