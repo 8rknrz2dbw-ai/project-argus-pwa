@@ -20,7 +20,6 @@ export function Dashboard() {
   const setScrubHours = useTacticalStore((s) => s.setScrubHours)
   const driftPoints = useTacticalStore((s) => s.driftPoints)
   const incidentTime = useTacticalStore((s) => s.incidentTime)
-  const driftMode = useTacticalStore((s) => s.driftMode)
   const [collapsed, setCollapsed] = useState(false)
 
   const hasPanel =
@@ -55,12 +54,12 @@ export function Dashboard() {
             <span className="shrink-0 font-mono text-[11px] text-amber-400">
               ⏱{' '}
               {scrubHours === 0
-                ? '關'
-                : fmtClock(driftEpoch(incidentTime, scrubHours, driftMode === 'backward', Date.now()))}
+                ? '落海點'
+                : fmtClock(driftEpoch(incidentTime, Math.abs(scrubHours), scrubHours < 0))}
             </span>
             <input
               type="range"
-              min={0}
+              min={-72}
               max={72}
               step={1}
               value={scrubHours}

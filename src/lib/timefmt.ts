@@ -15,14 +15,9 @@ export function fmtClockShort(epoch: number): string {
 }
 
 /**
- * 漂流時刻換算：forward=回報時間 + hours；reverse=現在 - hours。
- * 回傳該漂流點對應的實際 epoch。
+ * 漂流時刻換算（以 datum=回報/落海時間為基準）：
+ * forward=datum + hours；reverse(來源)=datum − hours。
  */
-export function driftEpoch(
-  incidentTime: number,
-  hours: number,
-  reverse: boolean,
-  now: number,
-): number {
-  return reverse ? now - hours * 3600000 : incidentTime + hours * 3600000
+export function driftEpoch(incidentTime: number, hours: number, reverse: boolean): number {
+  return incidentTime + (reverse ? -1 : 1) * hours * 3600000
 }

@@ -57,8 +57,10 @@ interface TacticalState {
   manOverboard: { lat: number; lng: number } | null
   /** 該點的即時海象。 */
   rescueEnv: MarineEnv | null
-  /** 漂流預測結果。 */
+  /** 漂流預測結果（順推：往未來漂）。 */
   driftPoints: DriftPoint[]
+  /** 回推來源結果（逆推：從datum往前推來源）。 */
+  sourcePoints: DriftPoint[]
   rescueStatus: 'idle' | 'loading' | 'done'
   /** 時間軸拉桿的小時數（0 = 不顯示 scrubber）。 */
   scrubHours: number
@@ -188,6 +190,7 @@ interface TacticalState {
   setScrubHours: (h: number) => void
   setDriftTarget: (id: string, leeway: number) => void
   setDriftPoints: (points: DriftPoint[]) => void
+  setSourcePoints: (points: DriftPoint[]) => void
   setDriftMode: (m: 'forward' | 'backward') => void
   setIncidentTime: (t: number) => void
   setRescueSeries: (s: HourlySeries | null) => void
@@ -216,6 +219,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   manOverboard: null,
   rescueEnv: null,
   driftPoints: [],
+  sourcePoints: [],
   rescueStatus: 'idle',
   scrubHours: 0,
   driftLeeway: 0.014,
@@ -271,6 +275,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
       manOverboard: null,
       rescueEnv: null,
       driftPoints: [],
+      sourcePoints: [],
       rescueStatus: 'idle',
       scrubHours: 0,
       driftLeeway: 0.014,
@@ -386,6 +391,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setScrubHours: (h) => set({ scrubHours: h }),
   setDriftTarget: (id, leeway) => set({ driftTargetId: id, driftLeeway: leeway }),
   setDriftPoints: (points) => set({ driftPoints: points }),
+  setSourcePoints: (points) => set({ sourcePoints: points }),
   setDriftMode: (m) => set({ driftMode: m }),
   setIncidentTime: (t) => set({ incidentTime: t }),
   setRescueSeries: (s) => set({ rescueSeries: s }),
