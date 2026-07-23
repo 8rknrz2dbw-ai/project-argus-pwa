@@ -29,6 +29,11 @@ export interface DriftInput {
   leewayFactor?: number
   /** 要預測的時間點（小時）。 */
   hoursList?: number[]
+  /**
+   * 逆推模式：true 時輸入點視為「現在發現的位置」，回推 t 小時「前」的
+   * 可能來源位置（漂移方向相反）。false（預設）為正推：落海點→未來漂到哪。
+   */
+  reverse?: boolean
 }
 
 export interface DriftPoint {
@@ -71,9 +76,10 @@ export function predictDrift(input: DriftInput): DriftPoint[] {
   const cur = toEastNorth(input.current)
   const wnd = toEastNorth(windToward)
 
-  // 合成漂移速度向量 (m/s)
-  const vEast = cur.east + wnd.east
-  const vNorth = cur.north + wnd.north
+  // 合成漂移速度向量 (m/s)。逆推時方向相反（回推來源）。
+  const sign = input.reverse ? -1 : 1
+  const vEast = (cur.east + wnd.east) * sign
+  const vNorth = (cur.north + wnd.north) * sign
   const vSpeed = Math.hypot(vEast, vNorth)
   const vBearing = (Math.atan2(vEast, vNorth) / DEG + 360) % 360
 
