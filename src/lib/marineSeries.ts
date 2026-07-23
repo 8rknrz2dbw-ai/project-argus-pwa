@@ -8,6 +8,8 @@
 // forecast_days 取未來。空間上以回報點單點時間序列近似（手機端折衷；
 // 真實 SAROPS 用時空皆變的場，這裡是可用的簡化）。
 
+import { climatologyCurrent } from './marineEnv'
+
 const WEATHER = 'https://api.open-meteo.com/v1/forecast'
 const MARINE = 'https://marine-api.open-meteo.com/v1/marine'
 const DEG = Math.PI / 180
@@ -76,17 +78,18 @@ export async function fetchHourlySeries(
     if (times.length === 0) throw new Error('empty series')
     return { times, windSpeed, windDir, currentSpeed, currentDir, live: true }
   } catch {
-    // fallback：造一條 24h 平穩序列
+    // fallback：用黑潮氣候平均（隨落海點位置而異），比固定 0.3/20 有意義。
     const now = nowEpoch()
     const times: number[] = []
     const a = (v: number) => Array(200).fill(v)
     for (let i = -120; i < 80; i++) times.push(now + i * HOUR)
+    const c = climatologyCurrent(lat, lng)
     return {
       times,
-      windSpeed: a(5),
+      windSpeed: a(6),
       windDir: a(225),
-      currentSpeed: a(0.3),
-      currentDir: a(20),
+      currentSpeed: a(c.speed),
+      currentDir: a(c.dir),
       live: false,
     }
   } finally {

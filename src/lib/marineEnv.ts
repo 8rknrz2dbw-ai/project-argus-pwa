@@ -25,9 +25,48 @@ export interface MarineEnv {
 const WEATHER = 'https://api.open-meteo.com/v1/forecast'
 const MARINE = 'https://marine-api.open-meteo.com/v1/marine'
 
-/** 海上網路不穩時的溫和預設值（輕微西南風、微弱北向流）。 */
+/**
+ * 離線 fallback 改用「黑潮氣候平均」空間場，而非到處一樣的固定值。
+ *
+ * 台灣周邊主要流系（夏季 7 月概況）：
+ *  - 台灣東岸：黑潮北上，沿岸強（~1.2 m/s，朝 NNE 20–40°），離岸漸弱。
+ *  - 台灣海峽：夏季西南季風驅動偏北流（~0.4 m/s，朝 NE ~35°）。
+ *  - 巴士海峽/南端：南海表層流，較弱且多變（~0.4 m/s，朝北）。
+ * 這是「氣候平均」不是即時觀測，但地理上真實、比固定值有意義得多。
+ * 標記 live:false，UI 會顯示「氣候平均(離線)」以示區別。
+ */
+export function climatologyCurrent(lat: number, lng: number): { speed: number; dir: number } {
+  // 東岸經度界線隨緯度略移：北端約 122.0，南端約 121.0。
+  const kuroshioEdge = 121.0 + (lat - 22) * 0.12
+  if (lng >= kuroshioEdge - 0.3 && lat >= 21.5 && lat <= 26) {
+    // 黑潮主流帶：離岸越遠越弱（0.3° 內最強）。
+    const offshore = Math.max(0, lng - kuroshioEdge)
+    const speed = Math.max(0.4, 1.35 - offshore * 0.55)
+    const dir = 30 + (lat - 22) * 3 // 南段偏北、北段偏東北
+    return { speed, dir }
+  }
+  if (lng < kuroshioEdge - 0.3 && lng >= 118 && lat >= 22 && lat <= 25.6) {
+    // 台灣海峽：夏季偏北流。
+    return { speed: 0.45, dir: 35 }
+  }
+  // 其他（南海/外海）：弱北向。
+  return { speed: 0.35, dir: 10 }
+}
+
+/** 海上網路不穩時的預設值：洋流用黑潮氣候平均（空間變化），風用夏季西南季風。 */
 function fallback(lat: number, lng: number): MarineEnv {
-  return { lat, lng, windSpeed: 5, windDir: 225, currentSpeed: 0.3, currentDir: 20, waveHeight: 1, sst: 26, live: false }
+  const c = climatologyCurrent(lat, lng)
+  return {
+    lat,
+    lng,
+    windSpeed: 6,
+    windDir: 225, // 夏季西南風（來向）
+    currentSpeed: c.speed,
+    currentDir: c.dir,
+    waveHeight: 1.2,
+    sst: 28,
+    live: false,
+  }
 }
 
 async function getJson(url: string, signal: AbortSignal): Promise<any> {

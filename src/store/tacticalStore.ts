@@ -20,8 +20,8 @@ interface TacticalState {
   maxCloudCover: number
   /** 歷史觀測日期（YYYY-MM-DD）。 */
   observationDate: string
-  /** 免金鑰光學影像來源：nasa=每日MODIS(有雲層/較糊)、esri=高解析鑲嵌(清晰)。 */
-  opticalSource: 'nasa' | 'esri'
+  /** 免金鑰光學影像來源：esri=高解析空拍(岸際最銳利)、eox=Sentinel-2無雲(10m平滑)、nasa=每日MODIS(有雲/較糊)。 */
+  opticalSource: 'nasa' | 'esri' | 'eox'
 
   // ── AI 分析結果 ─────────────────────────────────────
   detections: DetectionCollection | null
@@ -80,6 +80,9 @@ interface TacticalState {
   /** 動畫可用的時間點(epoch) 陣列。 */
   animTimes: number[]
 
+  // ── 領海基線/鄰接區參考線（跨模式覆蓋層）────────────
+  showTerritorial: boolean
+
   // ── 我的位置 (GPS，跨模式保留) ──────────────────────
   ownPosition: { lat: number; lng: number; accuracy: number } | null
 
@@ -90,7 +93,7 @@ interface TacticalState {
   setMode: (mode: TacticalMode) => void
   setMaxCloudCover: (v: number) => void
   setObservationDate: (d: string) => void
-  setOpticalSource: (s: 'nasa' | 'esri') => void
+  setOpticalSource: (s: 'nasa' | 'esri' | 'eox') => void
   setDetections: (d: DetectionCollection | null) => void
   setAiStatus: (s: TacticalState['aiStatus'], error?: string | null) => void
   setSelecting: (v: boolean) => void
@@ -101,6 +104,7 @@ interface TacticalState {
   setRescueStatus: (s: TacticalState['rescueStatus']) => void
   setVessels: (v: Vessel[]) => void
   setOwnPosition: (p: TacticalState['ownPosition']) => void
+  setShowTerritorial: (v: boolean) => void
   setSeaStateField: (f: 'sst' | 'wave') => void
   setAnimEpoch: (e: number) => void
   setAnimPlaying: (v: boolean) => void
@@ -150,6 +154,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   animPlaying: false,
   animTimes: [],
   ownPosition: null,
+  showTerritorial: false,
   statusMessage: '軌道預警模式待命中',
 
   setMode: (mode) =>
@@ -184,7 +189,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
 
   setMaxCloudCover: (v) => set({ maxCloudCover: v }),
   setObservationDate: (d) => set({ observationDate: d }),
-  setOpticalSource: (s) => set({ opticalSource: s }),
+  setOpticalSource: (s: 'nasa' | 'esri' | 'eox') => set({ opticalSource: s }),
   setDetections: (d) => set({ detections: d }),
   setAiStatus: (s, error = null) => set({ aiStatus: s, aiError: error }),
   setSelecting: (v) => set({ selecting: v }),
@@ -195,6 +200,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setRescueStatus: (s) => set({ rescueStatus: s }),
   setVessels: (v) => set({ vessels: v }),
   setOwnPosition: (p) => set({ ownPosition: p }),
+  setShowTerritorial: (v) => set({ showTerritorial: v }),
   setSeaStateField: (f) => set({ seaStateField: f }),
   setAnimEpoch: (e) => set({ animEpoch: e }),
   setAnimPlaying: (v) => set({ animPlaying: v }),
