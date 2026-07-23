@@ -30,9 +30,10 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Cache the OSM base tiles so the panel stays usable offline-ish.
-        // Imagery / SAR tiles are intentionally NOT cached (they are large and
-        // time-sensitive) to protect the phone's storage.
+        // 更新時清掉舊版快取，避免半新半舊導致白畫面 / 壞掉。
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/[abcd]\.basemaps\.cartocdn\.com\/.*/i,
