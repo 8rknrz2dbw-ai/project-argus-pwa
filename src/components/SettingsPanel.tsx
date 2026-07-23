@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { getConfig, saveConfig, clearConfig } from '../lib/config'
+import { getConfig, saveConfig, clearConfig, isCwaConfigured } from '../lib/config'
+import { fetchCwaJson } from '../lib/cwa'
 
 /**
  * 設定面板：在 App 裡直接貼金鑰（存 localStorage），免去改 Vercel 環境變數
@@ -83,6 +84,8 @@ export function SettingsPanel() {
               placeholder="CWA-XXXXXXXX-... 或 rdec-key-..."
             />
 
+            {isCwaConfigured() && <CwaProbe />}
+
             <div className="mt-4 flex gap-2">
               <button
                 onClick={save}
@@ -104,6 +107,61 @@ export function SettingsPanel() {
         </div>
       )}
     </>
+  )
+}
+
+/**
+ * CWA 資料檢視：直接打一個 dataset 看原始 JSON。用來(1)驗證授權碼+Worker 通了、
+ * (2)萬一某資料集欄位與解析器不符時，可看真實結構回報修正。
+ */
+function CwaProbe() {
+  const [ds, setDs] = useState('F-A0021-001')
+  const [out, setOut] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const run = async () => {
+    setBusy(true)
+    setOut('查詢中…')
+    try {
+      const data = await fetchCwaJson(ds.trim())
+      const s = JSON.stringify(data, null, 1)
+      setOut(s.length > 4000 ? s.slice(0, 4000) + '\n…（已截斷）' : s)
+    } catch (e) {
+      setOut('✗ ' + String((e as Error)?.message ?? e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-2 rounded-lg border border-slate-700 bg-slate-900/40 p-2">
+      <div className="mb-1 text-[11px] font-semibold text-tactical-green">🔬 CWA 資料檢視（測試）</div>
+      <div className="flex gap-1">
+        <input
+          value={ds}
+          onChange={(e) => setDs(e.target.value)}
+          spellCheck={false}
+          autoCapitalize="characters"
+          className="w-0 flex-1 rounded border border-slate-600 bg-slate-900 px-2 py-1.5 font-mono text-xs text-slate-200"
+          placeholder="F-A0021-001"
+        />
+        <button
+          onClick={run}
+          disabled={busy}
+          className="shrink-0 rounded border border-tactical-green/50 bg-tactical-green/10 px-3 py-1.5 text-xs font-bold text-tactical-green active:scale-95 disabled:opacity-40"
+        >
+          查詢
+        </button>
+      </div>
+      <p className="mt-1 text-[10px] text-slate-500">
+        常用：F-A0021-001 潮汐、F-A0012-001 海面預報、W-C0034-005 颱風路徑
+      </p>
+      {out && (
+        <pre className="mt-1 max-h-48 overflow-auto rounded bg-black/40 p-2 font-mono text-[9px] leading-tight text-slate-300">
+          {out}
+        </pre>
+      )}
+    </div>
   )
 }
 

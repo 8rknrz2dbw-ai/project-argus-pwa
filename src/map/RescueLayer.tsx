@@ -9,6 +9,8 @@ import {
   integrateDriftSeries,
   monteCarloSeries,
 } from '../lib/marineSeries'
+import { isCwaConfigured } from '../lib/config'
+import { fetchCwaTide } from '../lib/cwaMarine'
 
 /**
  * 搜救推演圖層。只在 rescue 模式運行：
@@ -38,6 +40,7 @@ export function RescueLayer({ map }: { map: L.Map }) {
   const incidentTime = useTacticalStore((s) => s.incidentTime)
   const rescueSeries = useTacticalStore((s) => s.rescueSeries)
   const setRescueSeries = useTacticalStore((s) => s.setRescueSeries)
+  const setCwaTide = useTacticalStore((s) => s.setCwaTide)
   const reverse = driftMode === 'backward'
   // 積分基準時刻：逆推從「現在」往回；順推從「回報時間」往後。
   const baseEpoch = reverse ? Date.now() : incidentTime
@@ -132,6 +135,13 @@ export function RescueLayer({ map }: { map: L.Map }) {
     fetchHourlySeries(manOverboard.lat, manOverboard.lng, pastDays, 4).then((s) => {
       if (!cancelled) setRescueSeries(s)
     })
+    // CWA 在地潮汐（有設定才抓；影響近岸漂流/擱淺判斷）。
+    setCwaTide(null)
+    if (isCwaConfigured()) {
+      fetchCwaTide(manOverboard.lat, manOverboard.lng).then((t) => {
+        if (!cancelled) setCwaTide(t)
+      })
+    }
     return () => {
       cancelled = true
     }

@@ -32,6 +32,7 @@ export function RescueControls() {
   const setStatus = useTacticalStore((s) => s.setStatus)
 
   const mcSummary = useTacticalStore((s) => s.mcSummary)
+  const tide = useTacticalStore((s) => s.cwaTide)
   const driftTargetLabel =
     DRIFT_TARGETS.find((t) => t.id === driftTargetId)?.label ?? '落海人'
 
@@ -216,6 +217,28 @@ export function RescueControls() {
         </div>
       )}
 
+      {/* CWA 在地潮汐（近岸擱淺/潮流窗口）*/}
+      {mob && tide && tide.length > 0 && (
+        <div className="rounded-lg border border-sky-500/40 bg-sky-500/5 p-2">
+          <div className="mb-1 flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-sky-300">🌙 潮汐（CWA · {tide[0].station}）</span>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            {tide.slice(0, 4).map((e, i) => (
+              <div key={i} className="flex justify-between font-mono text-[11px]">
+                <span className={e.type.includes('滿') || e.type.includes('高') ? 'text-sky-200' : 'text-slate-400'}>
+                  {e.type.includes('滿') || e.type.includes('高') ? '▲ 滿潮' : '▼ 乾潮'}
+                </span>
+                <span className="text-slate-300">{tideClock(e.time)}</span>
+                <span className="text-slate-500">
+                  {e.heightCm != null ? `${e.heightCm > 0 ? '+' : ''}${Math.round(e.heightCm)} cm` : '—'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 漂流結果 */}
       {status === 'loading' && <p className="text-xs text-tactical-cyan">計算漂流中…</p>}
       {status === 'done' && drift.length > 0 && (
@@ -360,6 +383,14 @@ export function RescueControls() {
       </div>
     </div>
   )
+}
+
+/** 潮汐時間顯示（月/日 時:分）。 */
+function tideClock(epoch: number): string {
+  const d = new Date(epoch)
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  return `${d.getMonth() + 1}/${d.getDate()} ${hh}:${mm}`
 }
 
 /** epoch → datetime-local input 字串（本地時區）。 */

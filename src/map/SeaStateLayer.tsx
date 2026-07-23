@@ -3,6 +3,8 @@ import L from 'leaflet'
 import { useTacticalStore } from '../store/tacticalStore'
 import { fetchEnvGrid, type MarineEnv } from '../lib/marineEnv'
 import { sstColor, waveColor } from '../lib/colorScale'
+import { isCwaConfigured } from '../lib/config'
+import { fetchCwaSeaAreas } from '../lib/cwaMarine'
 
 /**
  * 海況熱力圖：把當前視野的海溫或浪高畫成彩色網格（免金鑰，Open-Meteo）。
@@ -12,6 +14,7 @@ export function SeaStateLayer({ map }: { map: L.Map }) {
   const mode = useTacticalStore((s) => s.mode)
   const field = useTacticalStore((s) => s.seaStateField)
   const setStatus = useTacticalStore((s) => s.setStatus)
+  const setCwaSeaAreas = useTacticalStore((s) => s.setCwaSeaAreas)
 
   const groupRef = useRef<L.LayerGroup | null>(null)
   const envRef = useRef<MarineEnv[]>([])
@@ -80,7 +83,17 @@ export function SeaStateLayer({ map }: { map: L.Map }) {
     map.on('moveend', onMoveEnd)
     refresh()
 
+    // CWA 台灣各海域海面天氣/波浪官方預報（有設定才抓，一次即可）。
+    let cancelled = false
+    setCwaSeaAreas(null)
+    if (isCwaConfigured()) {
+      fetchCwaSeaAreas().then((s) => {
+        if (!cancelled) setCwaSeaAreas(s)
+      })
+    }
+
     return () => {
+      cancelled = true
       map.off('moveend', onMoveEnd)
       if (debounceRef.current) clearTimeout(debounceRef.current)
       group.clearLayers()

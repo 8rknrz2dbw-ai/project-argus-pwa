@@ -5,6 +5,7 @@ import { SST_LEGEND, WAVE_LEGEND } from '../lib/colorScale'
 export function SeaStateControls() {
   const field = useTacticalStore((s) => s.seaStateField)
   const setField = useTacticalStore((s) => s.setSeaStateField)
+  const seaAreas = useTacticalStore((s) => s.cwaSeaAreas)
   const legend = field === 'sst' ? SST_LEGEND : WAVE_LEGEND
 
   // 產生色條的漸層
@@ -57,8 +58,30 @@ export function SeaStateControls() {
         </div>
       </div>
 
+      {/* CWA 官方各海域海面預報（有設定才顯示）*/}
+      {seaAreas && seaAreas.length > 0 && (
+        <div className="rounded-lg border border-tactical-green/30 bg-tactical-green/5 p-2">
+          <div className="mb-1 text-[11px] font-semibold text-tactical-green">
+            🌊 CWA 海面預報（官方各海域）
+          </div>
+          <div className="flex max-h-32 flex-col gap-0.5 overflow-y-auto">
+            {seaAreas.map((a, i) => (
+              <div key={i} className="flex items-start justify-between gap-2 text-[10px]">
+                <span className="shrink-0 font-semibold text-slate-300">{a.area}</span>
+                <span className="text-right text-slate-400">
+                  {[a.wind, a.waveText ?? (a.waveM != null ? `浪 ${a.waveM} m` : null)]
+                    .filter(Boolean)
+                    .join('｜') || '—'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <p className="text-[10px] leading-relaxed text-slate-500">
-        免金鑰海象資料（Open-Meteo）。點格子看數值；平移地圖會重新載入該區。
+        熱力圖為免金鑰海象（Open-Meteo）。點格子看數值；平移地圖會重新載入該區。
+        {seaAreas === null && '設定 CWA 後，這裡會顯示官方各海域風/浪預報。'}
       </p>
     </div>
   )
