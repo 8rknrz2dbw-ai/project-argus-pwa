@@ -84,3 +84,23 @@ export function buildGibsTrueColor(date: string): L.TileLayer {
     crossOrigin: 'anonymous',
   })
 }
+
+/**
+ * VIIRS（NOAA-20）每日真彩色，等同 NASA Worldview 的每日影像。感測器較新、
+ * 畫面常比 MODIS 乾淨；一樣全球覆蓋含外海、免金鑰。約 375m。
+ */
+export function buildGibsViirs(date: string): L.TileLayer {
+  const layer = 'VIIRS_NOAA20_CorrectedReflectance_TrueColor'
+  const url = `${GIBS_BASE}/${layer}/default/${date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`
+  return L.tileLayer(url, {
+    maxNativeZoom: 9,
+    maxZoom: 19,
+    bounds: [
+      [-85.05, -180],
+      [85.05, 180],
+    ],
+    attribution: 'Imagery © NASA EOSDIS GIBS · VIIRS NOAA-20',
+    className: 'gibs-imagery',
+    crossOrigin: 'anonymous',
+  })
+}

@@ -60,7 +60,7 @@ export function OpticalControls() {
   const SRC_INFO: Record<string, string> = {
     esri: '高解析空拍鑲嵌 · 岸際/島礁最銳利，但⚠外海是空的（黑）——外海請切每日/無雲/海底',
     eox: 'Sentinel-2 無雲真彩色 · 10m 乾淨平滑、含外海（年度合成，非每日）',
-    nasa: 'NASA MODIS 每日真彩色 · 含外海每日雲況，約 250m（可選歷史日期）',
+    nasa: 'VIIRS/MODIS 每日真彩色（等同 NASA Worldview）· 含外海每日雲況（可選歷史日期）',
     ocean: '海底地形（Esri Ocean）· 覆蓋外海：水深/海脊/淺灘，適合漁區/航道/暗礁',
   }
 

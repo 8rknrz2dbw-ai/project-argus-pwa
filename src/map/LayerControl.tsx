@@ -3,7 +3,13 @@ import L from 'leaflet'
 import { useTacticalStore } from '../store/tacticalStore'
 import { SatelliteCanvasLayer } from './SatelliteCanvasLayer'
 import { buildWmsConfig, LAYERS, isSentinelConfigured } from '../lib/sentinel'
-import { buildGibsTrueColor, buildEsriImagery, buildS2Cloudless, buildEsriOcean } from '../lib/gibs'
+import {
+  buildGibsTrueColor,
+  buildGibsViirs,
+  buildEsriImagery,
+  buildS2Cloudless,
+  buildEsriOcean,
+} from '../lib/gibs'
 import type { DetectionCollection } from '../types'
 
 /**
@@ -117,13 +123,25 @@ export function LayerControl({ map }: { map: L.Map }) {
         setStatus('載入 Sentinel-2 無雲影像中（EOX · 免金鑰）…')
         return
       }
-      const gibs = buildGibsTrueColor(observationDate)
-      gibs.on('load', () =>
-        setStatus('每日衛星影像（NASA MODIS · 約 250m）。放大想更清晰請切「高解析／無雲」'),
+      // 每日影像：先用 VIIRS（等同 Worldview，較新較乾淨），無資料時退回 MODIS。
+      const viirs = buildGibsViirs(observationDate)
+      let vErr = 0
+      viirs.on('load', () =>
+        setStatus('每日衛星影像（VIIRS NOAA-20 · 等同 Worldview，含外海）。想更清晰切「高解析／無雲」'),
       )
-      gibs.addTo(map)
-      tileRef.current = gibs
-      setStatus('載入每日衛星影像中（NASA MODIS）…若空白請把日期往回調 1–2 天')
+      viirs.on('tileerror', () => {
+        vErr++
+        if (vErr === 3) {
+          removeTile()
+          const modis = buildGibsTrueColor(observationDate)
+          modis.addTo(map)
+          tileRef.current = modis
+          setStatus('VIIRS 該日無資料，改用 MODIS 每日影像（把日期往回調 1–2 天更保險）')
+        }
+      })
+      viirs.addTo(map)
+      tileRef.current = viirs
+      setStatus('載入每日衛星影像中（VIIRS）…若空白請把日期往回調 1–2 天')
     }
 
     function mountWms(layer: string, maxcc: number | undefined) {
