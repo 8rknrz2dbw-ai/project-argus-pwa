@@ -3,7 +3,7 @@ import { useTacticalStore } from '../store/tacticalStore'
 import { bearingToText, DRIFT_TARGETS } from '../lib/drift'
 import { buildReport, shareReport } from '../lib/report'
 import { SatelliteQuickLinks } from './SatelliteQuickLinks'
-import { parseCoord } from '../lib/coordParse'
+import { parseCoord, fmtDDM } from '../lib/coordParse'
 import { sunTimes } from '../lib/sun'
 import { fmtClock, driftEpoch } from '../lib/timefmt'
 import { bearingDeg } from '../map/MeasureLayer'
@@ -38,11 +38,14 @@ export function RescueControls() {
 
   const mcSummary = useTacticalStore((s) => s.mcSummary)
   const tide = useTacticalStore((s) => s.cwaTide)
+  const savedCoords = useTacticalStore((s) => s.savedCoords)
+  const gotoCoord = useTacticalStore((s) => s.gotoCoord)
   const driftTargetLabel =
     DRIFT_TARGETS.find((t) => t.id === driftTargetId)?.label ?? '落海人'
 
   // 手動輸入座標（實戰時座標常由無線電報來）
   const [manual, setManual] = useState(false)
+  const [pickSaved, setPickSaved] = useState(false)
   const [latStr, setLatStr] = useState('')
   const [lngStr, setLngStr] = useState('')
   const placeByCoord = () => {
@@ -145,6 +148,42 @@ export function RescueControls() {
             {elapsedHint(incidentTime)}
             ｜用「該時刻到現在」的逐時真實海流/風積分，⌖綠圈=目標現在位置
           </p>
+        </div>
+      )}
+
+      {/* 從已存座標（最愛/釘選）直接選為搜救點 */}
+      {savedCoords.length > 0 && (
+        <div>
+          <button
+            onClick={() => setPickSaved(!pickSaved)}
+            className="text-[11px] text-pink-300 underline-offset-2 hover:underline"
+          >
+            {pickSaved ? '▾ 從我的座標選' : `▸ 從我的座標選（📌最愛/釘選 ${savedCoords.length}）`}
+          </button>
+          {pickSaved && (
+            <div className="mt-1 flex max-h-28 flex-col gap-0.5 overflow-y-auto">
+              {savedCoords.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    setMob({ lat: c.lat, lng: c.lng })
+                    setPickSaved(false)
+                    setStatus(`已用「${c.label}」為搜救點`)
+                  }}
+                  className="flex items-center justify-between rounded border border-slate-700 bg-slate-900/50 px-2 py-1 text-left active:scale-95"
+                >
+                  <span className="truncate text-[11px] text-slate-200">
+                    {c.pinned ? '📌' : ''}
+                    {c.favorite ? '★' : ''}
+                    {c.label}
+                  </span>
+                  <span className="shrink-0 font-mono text-[9px] text-slate-500">
+                    {c.lat.toFixed(3)}, {c.lng.toFixed(3)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -270,23 +309,42 @@ export function RescueControls() {
         </div>
       )}
 
-      {/* 漂流結果 */}
+      {/* 漂流結果：沿路各時刻的座標（點一下飛過去，方便標定/回報）*/}
       {status === 'loading' && <p className="text-xs text-tactical-cyan">計算漂流中…</p>}
       {status === 'done' && drift.length > 0 && (
         <div className="flex flex-col gap-1 rounded border border-rose-500/40 bg-rose-500/5 p-2">
-          <div className="mb-1 text-[11px] font-semibold text-tactical-alert">
-            {reverse ? '回推來源（浬）' : '漂流預判（浬）'}
+          <div className="mb-1 flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-tactical-alert">
+              {reverse ? '🔎 回推來源沿路座標' : '🆘 漂流沿路座標'}（點擊飛過去）
+            </span>
           </div>
           {drift.map((p) => (
-            <div key={p.hours} className="flex justify-between font-mono text-[11px] text-slate-300">
-              <span className="text-tactical-alert">
-                {p.hours}h {reverse ? '前' : '後'}
-              </span>
-              <span>
-                {bearingToText(p.bearingDeg)}方 {(p.driftMeters / 1852).toFixed(1)} 浬
-              </span>
-              <span className="text-slate-400">半徑 {(p.radiusMeters / 1852).toFixed(1)}</span>
-            </div>
+            <button
+              key={p.hours}
+              onClick={() => gotoCoord(p.lat, p.lng, 12)}
+              className="flex flex-col rounded border border-rose-500/20 bg-slate-900/40 px-2 py-1 text-left active:scale-95"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[11px] font-bold text-tactical-alert">
+                  {fmtClock(driftEpoch(incidentTime, p.hours, reverse, Date.now()))}
+                  <span className="ml-1 font-normal text-slate-500">
+                    {reverse ? '−' : '+'}
+                    {p.hours}h
+                  </span>
+                </span>
+                <span className="font-mono text-[10px] text-slate-400">
+                  {bearingToText(p.bearingDeg)}方 {(p.driftMeters / 1852).toFixed(1)} 浬
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] text-slate-300">
+                  {fmtDDM(p.lat, p.lng)}
+                </span>
+                <span className="font-mono text-[9px] text-slate-500">
+                  半徑 {(p.radiusMeters / 1852).toFixed(1)} 浬
+                </span>
+              </div>
+            </button>
           ))}
         </div>
       )}
