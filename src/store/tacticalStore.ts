@@ -4,6 +4,7 @@ import type { DriftPoint } from '../lib/drift'
 import type { MarineEnv } from '../lib/marineEnv'
 import type { HourlySeries } from '../lib/marineSeries'
 import type { Vessel } from '../lib/ais'
+import type { TideEvent, SeaAreaForecast } from '../lib/cwaMarine'
 
 /**
  * 全域戰術狀態 —— 整個 App 唯一的「真相來源 (single source of truth)」。
@@ -72,6 +73,12 @@ interface TacticalState {
   /** 熱力圖顯示哪個欄位：海溫或浪高。 */
   seaStateField: 'sst' | 'wave'
 
+  // ── CWA 在地官方海象（潮汐 / 海面預報）────────────────
+  /** 落海點附近的 CWA 潮汐事件（null=未取得/未設定）。 */
+  cwaTide: TideEvent[] | null
+  /** CWA 台灣各海域海面天氣/波浪預報。 */
+  cwaSeaAreas: SeaAreaForecast[] | null
+
   // ── 環境時間動畫 (envanim) ───────────────────────────
   /** 動畫目前顯示的小時 epoch（0=未載入）。 */
   animEpoch: number
@@ -106,6 +113,8 @@ interface TacticalState {
   setOwnPosition: (p: TacticalState['ownPosition']) => void
   setShowTerritorial: (v: boolean) => void
   setSeaStateField: (f: 'sst' | 'wave') => void
+  setCwaTide: (t: TideEvent[] | null) => void
+  setCwaSeaAreas: (s: SeaAreaForecast[] | null) => void
   setAnimEpoch: (e: number) => void
   setAnimPlaying: (v: boolean) => void
   setAnimTimes: (t: number[]) => void
@@ -150,6 +159,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   trackSpacingNm: 1,
   vessels: [],
   seaStateField: 'sst',
+  cwaTide: null,
+  cwaSeaAreas: null,
   animEpoch: 0,
   animPlaying: false,
   animTimes: [],
@@ -182,8 +193,10 @@ export const useTacticalStore = create<TacticalState>((set) => ({
       showSearchPattern: false,
       trackSpacingNm: 1,
       vessels: [],
+      cwaTide: null,
+      cwaSeaAreas: null,
       animPlaying: false,
-  animTimes: [],
+      animTimes: [],
       statusMessage: MODE_HINT[mode],
     })),
 
@@ -202,6 +215,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setOwnPosition: (p) => set({ ownPosition: p }),
   setShowTerritorial: (v) => set({ showTerritorial: v }),
   setSeaStateField: (f) => set({ seaStateField: f }),
+  setCwaTide: (t) => set({ cwaTide: t }),
+  setCwaSeaAreas: (s) => set({ cwaSeaAreas: s }),
   setAnimEpoch: (e) => set({ animEpoch: e }),
   setAnimPlaying: (v) => set({ animPlaying: v }),
   setAnimTimes: (t) => set({ animTimes: t }),
