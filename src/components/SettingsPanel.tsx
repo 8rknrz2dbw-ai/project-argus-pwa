@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { getConfig, saveConfig, clearConfig, isCwaConfigured } from '../lib/config'
+import { getConfig, saveConfig, isCwaConfigured } from '../lib/config'
 import { fetchCwaJson } from '../lib/cwa'
 import { downloadBackup, restoreBackup } from '../lib/backup'
 
@@ -16,10 +16,6 @@ export function SettingsPanel() {
   const save = () => {
     saveConfig(cfg)
     location.reload() // 重載讓 WMS/AIS/AI 圖層讀到新金鑰
-  }
-  const reset = () => {
-    clearConfig()
-    location.reload()
   }
   const doImport = (file: File) => {
     const reader = new FileReader()
@@ -170,12 +166,6 @@ export function SettingsPanel() {
                 className="flex-1 rounded-lg border border-tactical-cyan bg-tactical-cyan/15 py-2.5 text-sm font-bold text-tactical-cyan active:scale-95"
               >
                 儲存並套用
-              </button>
-              <button
-                onClick={reset}
-                className="rounded-lg border border-slate-600 px-3 py-2.5 text-sm text-slate-300 active:scale-95"
-              >
-                清除
               </button>
             </div>
             <p className="mt-3 text-[10px] text-slate-500">

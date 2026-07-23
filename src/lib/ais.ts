@@ -24,6 +24,7 @@ import { getConfig, isAisConfigured } from './config'
 export { isAisConfigured }
 
 type Listener = (vessels: Vessel[]) => void
+type StatusListener = (status: string) => void
 
 /** 台灣周邊模擬船隻。 */
 const SIM_FLEET: Vessel[] = [
@@ -37,10 +38,10 @@ const SIM_FLEET: Vessel[] = [
 
 const DEG = Math.PI / 180
 
-/** 訂閱 AIS。回傳取消訂閱函式。 */
-export function subscribeAIS(onUpdate: Listener): () => void {
+/** 訂閱 AIS。回傳取消訂閱函式。onStatus 回報連線狀態給 UI。 */
+export function subscribeAIS(onUpdate: Listener, onStatus?: StatusListener): () => void {
   const key = getConfig().aisKey
-  if (key) return subscribeReal(onUpdate, key)
+  if (key) return subscribeReal(onUpdate, key, onStatus)
   return subscribeSim(onUpdate)
 }
 
@@ -65,50 +66,126 @@ function subscribeSim(onUpdate: Listener): () => void {
   return () => clearInterval(timer)
 }
 
-/** 真實：連 aisstream.io WebSocket。 */
-function subscribeReal(onUpdate: Listener, key: string): () => void {
-  const ws = new WebSocket('wss://stream.aisstream.io/v0/stream')
+/** 真實：連 aisstream.io WebSocket（含狀態回報、斷線自動重連、船名/船種）。 */
+function subscribeReal(onUpdate: Listener, key: string, onStatus?: StatusListener): () => void {
   const byMmsi = new Map<string, Vessel>()
+  let ws: WebSocket | null = null
+  let closedByUs = false
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  let noDataTimer: ReturnType<typeof setTimeout> | null = null
+  let gotAny = false
+  let attempt = 0
 
-  ws.onopen = () => {
-    // 訂閱台灣周邊 bounding box（可自行調整）。
-    ws.send(
-      JSON.stringify({
-        APIKey: key,
-        BoundingBoxes: [[[21.5, 119.0], [26.0, 123.5]]],
-        FilterMessageTypes: ['PositionReport'],
-      }),
-    )
-  }
-  ws.onmessage = (ev) => {
-    try {
-      const msg = JSON.parse(ev.data as string)
-      const meta = msg?.MetaData
-      const pr = msg?.Message?.PositionReport
-      if (!meta || !pr) return
-      const mmsi = String(meta.MMSI)
-      byMmsi.set(mmsi, {
-        mmsi,
-        name: (meta.ShipName || '(無船名)').trim(),
-        lat: pr.Latitude,
-        lng: pr.Longitude,
-        cog: pr.Cog ?? 0,
-        sog: pr.Sog ?? 0,
-        type: '—',
-      })
-      onUpdate([...byMmsi.values()])
-    } catch {
-      /* 忽略單筆解析錯誤 */
+  const status = (s: string) => onStatus?.(s)
+
+  const connect = () => {
+    status(attempt === 0 ? 'AIS：連線 aisstream.io…' : `AIS：重新連線中（第 ${attempt} 次）…`)
+    ws = new WebSocket('wss://stream.aisstream.io/v0/stream')
+
+    ws.onopen = () => {
+      attempt = 0
+      status('AIS：已連線，訂閱台灣周邊船位，等待回報…')
+      ws?.send(
+        JSON.stringify({
+          APIKey: key,
+          BoundingBoxes: [
+            [
+              [21.0, 118.0],
+              [26.5, 124.0],
+            ],
+          ],
+          FilterMessageTypes: ['PositionReport', 'ShipStaticData'],
+        }),
+      )
+      // 15 秒內沒任何資料 → 提示可能金鑰或範圍問題。
+      if (noDataTimer) clearTimeout(noDataTimer)
+      noDataTimer = setTimeout(() => {
+        if (!gotAny) status('AIS：已連線但 15 秒無船位——請確認 AISStream 金鑰正確／未超額')
+      }, 15000)
+    }
+
+    ws.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data as string)
+        const type = msg?.MessageType
+        const meta = msg?.MetaData
+        if (!meta) return
+        const mmsi = String(meta.MMSI ?? meta.mmsi ?? '')
+        if (!mmsi) return
+        const prev = byMmsi.get(mmsi)
+
+        if (type === 'PositionReport') {
+          const pr = msg?.Message?.PositionReport
+          if (!pr) return
+          const lat = pr.Latitude ?? meta.latitude
+          const lng = pr.Longitude ?? meta.longitude
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+          byMmsi.set(mmsi, {
+            mmsi,
+            name: prev?.name || (meta.ShipName || '(無船名)').trim(),
+            lat,
+            lng,
+            cog: pr.Cog ?? prev?.cog ?? 0,
+            sog: pr.Sog ?? prev?.sog ?? 0,
+            type: prev?.type || '—',
+          })
+        } else if (type === 'ShipStaticData') {
+          const sd = msg?.Message?.ShipStaticData
+          if (!sd || !prev) return
+          byMmsi.set(mmsi, {
+            ...prev,
+            name: (sd.Name || meta.ShipName || prev.name).trim(),
+            type: shipTypeText(sd.Type) || prev.type,
+          })
+        } else return
+
+        if (!gotAny) {
+          gotAny = true
+          if (noDataTimer) clearTimeout(noDataTimer)
+        }
+        status(`AIS：即時船位 ${byMmsi.size} 艘（aisstream.io）`)
+        onUpdate([...byMmsi.values()])
+      } catch {
+        /* 忽略單筆解析錯誤 */
+      }
+    }
+
+    ws.onerror = () => {
+      status('AIS：連線發生錯誤，將自動重連…')
+    }
+
+    ws.onclose = () => {
+      if (closedByUs) return
+      attempt++
+      const delay = Math.min(30000, 2000 * attempt)
+      status(`AIS：連線中斷，${Math.round(delay / 1000)} 秒後重連…`)
+      reconnectTimer = setTimeout(connect, delay)
     }
   }
-  ws.onerror = () => {
-    /* 交給 onclose 收尾 */
-  }
+
+  connect()
+
   return () => {
+    closedByUs = true
+    if (reconnectTimer) clearTimeout(reconnectTimer)
+    if (noDataTimer) clearTimeout(noDataTimer)
     try {
-      ws.close()
+      ws?.close()
     } catch {
       /* noop */
     }
   }
+}
+
+/** AIS 船種代碼→中文（簡化）。 */
+function shipTypeText(t: unknown): string {
+  const n = typeof t === 'number' ? t : parseInt(String(t), 10)
+  if (!Number.isFinite(n)) return ''
+  if (n >= 30 && n <= 30) return '漁船'
+  if (n >= 60 && n <= 69) return '客船'
+  if (n >= 70 && n <= 79) return '貨船'
+  if (n >= 80 && n <= 89) return '油輪/化學船'
+  if (n >= 40 && n <= 49) return '高速船'
+  if (n >= 50 && n <= 59) return '特種船'
+  return '其他'
 }

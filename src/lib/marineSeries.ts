@@ -208,6 +208,11 @@ export function integrateDriftSeries(
   leeway: number,
   reverse: boolean,
   divergenceDeg = 0,
+  /**
+   * 可選的「空間洋流場」：依目前所在位置回傳洋流(speed m/s, dir toward deg)。
+   * 提供時，每一步用『當下位置』的洋流（會隨黑潮等空間變化轉折→軌跡彎曲，不再假直線）。
+   */
+  spatialCurrent?: (lat: number, lng: number) => { speed: number; dir: number },
 ): TVPoint[] {
   const maxH = Math.max(...hoursList)
   let lat = startLat
@@ -220,7 +225,8 @@ export function integrateDriftSeries(
     const f = fieldAt(series, epoch)
     const windToward = (f.windDir + 180 + divergenceDeg + 360) % 360
     const w = toEN(f.windSpeed * leeway, windToward)
-    const c = toEN(f.currentSpeed, f.currentDir)
+    const cur = spatialCurrent ? spatialCurrent(lat, lng) : { speed: f.currentSpeed, dir: f.currentDir }
+    const c = toEN(cur.speed, cur.dir)
     let vE = c.e + w.e
     let vN = c.n + w.n
     if (reverse) {
@@ -261,6 +267,7 @@ export function monteCarloSeries(opts: {
   reverse: boolean
   n?: number
   posSigmaM?: number
+  spatialCurrent?: (lat: number, lng: number) => { speed: number; dir: number }
 }) {
   const n = opts.n ?? 600
   const posSigma = opts.posSigmaM ?? 400
@@ -286,6 +293,7 @@ export function monteCarloSeries(opts: {
       leewayP,
       opts.reverse,
       div,
+      opts.spatialCurrent,
     )
     const e = pts[0]
     endLat[i] = e ? e.lat : s0.lat

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTacticalStore } from '../store/tacticalStore'
+import { fmtClock, driftEpoch } from '../lib/timefmt'
 import { ModeButtons } from './ModeButtons'
 import { OpticalControls } from './OpticalControls'
 import { SarControls } from './SarControls'
@@ -18,6 +19,8 @@ export function Dashboard() {
   const scrubHours = useTacticalStore((s) => s.scrubHours)
   const setScrubHours = useTacticalStore((s) => s.setScrubHours)
   const driftPoints = useTacticalStore((s) => s.driftPoints)
+  const incidentTime = useTacticalStore((s) => s.incidentTime)
+  const driftMode = useTacticalStore((s) => s.driftMode)
   const [collapsed, setCollapsed] = useState(false)
 
   const hasPanel =
@@ -50,7 +53,10 @@ export function Dashboard() {
         {showMiniScrub && (
           <div className="flex items-center gap-2 rounded-lg border border-amber-500/40 bg-tactical-panel/95 px-3 py-2">
             <span className="shrink-0 font-mono text-[11px] text-amber-400">
-              ⏱ {scrubHours === 0 ? '關' : `${scrubHours}h`}
+              ⏱{' '}
+              {scrubHours === 0
+                ? '關'
+                : fmtClock(driftEpoch(incidentTime, scrubHours, driftMode === 'backward', Date.now()))}
             </span>
             <input
               type="range"
