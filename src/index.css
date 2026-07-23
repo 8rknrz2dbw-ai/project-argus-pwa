@@ -73,6 +73,12 @@ body,
   filter: drop-shadow(0 0 4px rgba(244, 114, 182, 0.8));
 }
 
+/* 畫面資訊條：位於狀態列（兩行）下方 */
+.map-info-pos {
+  top: calc(env(safe-area-inset-top) + 3.4rem);
+  left: calc(0.75rem + env(safe-area-inset-left));
+}
+
 /* 深色底圖已改用 CARTO dark_matter，這裡只做輕微微調＋雷達幕氛圍 */
 .base-tiles-tactical {
   filter: brightness(0.9) contrast(1.05) saturate(1.1);
