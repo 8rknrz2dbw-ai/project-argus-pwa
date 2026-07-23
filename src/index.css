@@ -59,6 +59,11 @@ body,
   top: calc(0.5rem + env(safe-area-inset-top) + 22.6rem);
   right: calc(0.75rem + env(safe-area-inset-right));
 }
+/* 第 8 格（底圖切換） */
+.safe-float-top8 {
+  top: calc(0.5rem + env(safe-area-inset-top) + 26rem);
+  right: calc(0.75rem + env(safe-area-inset-right));
+}
 /* 量測段標籤 */
 .measure-label {
   font: 700 10px ui-monospace, monospace;

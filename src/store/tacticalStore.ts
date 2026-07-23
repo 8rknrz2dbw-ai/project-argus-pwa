@@ -6,6 +6,7 @@ import type { HourlySeries } from '../lib/marineSeries'
 import type { Vessel } from '../lib/ais'
 import type { Detection } from '../lib/detection'
 import type { Typhoon } from '../lib/typhoon'
+import type { BaseLayerId } from '../lib/baseLayers'
 import type { TideEvent, SeaAreaForecast } from '../lib/cwaMarine'
 import {
   loadSaved,
@@ -111,6 +112,9 @@ interface TacticalState {
   /** 動畫可用的時間點(epoch) 陣列。 */
   animTimes: number[]
 
+  // ── 底圖選擇（戰術暗色 / 中文電子地圖 / 中文衛星混合）──
+  baseLayer: BaseLayerId
+
   // ── 右側工具列是否展開（收合浮動按鈕，手機版面清爽）──
   toolsExpanded: boolean
 
@@ -171,6 +175,7 @@ interface TacticalState {
   addMeasurePoint: (p: { lat: number; lng: number }) => void
   clearMeasure: () => void
   toggleTools: () => void
+  setBaseLayer: (id: BaseLayerId) => void
   setShowTerritorial: (v: boolean) => void
   setSeaStateField: (f: 'sst' | 'wave') => void
   setSeaStateRange: (r: { min: number; max: number } | null) => void
@@ -239,6 +244,16 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   ownPosition: null,
   trackRecording: false,
   ownTrack: [],
+  baseLayer: ((): BaseLayerId => {
+    const v = (() => {
+      try {
+        return localStorage.getItem('argus.baseLayer.v1')
+      } catch {
+        return null
+      }
+    })()
+    return v === 'nlsc' || v === 'nlscPhoto' || v === 'dark' ? v : 'dark'
+  })(),
   toolsExpanded: false,
   showTerritorial: false,
   statusMessage: '軌道預警模式待命中',
@@ -351,6 +366,14 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   addMeasurePoint: (p) => set((st) => ({ measurePoints: [...st.measurePoints, p] })),
   clearMeasure: () => set({ measurePoints: [] }),
   toggleTools: () => set((st) => ({ toolsExpanded: !st.toolsExpanded })),
+  setBaseLayer: (id) => {
+    try {
+      localStorage.setItem('argus.baseLayer.v1', id)
+    } catch {
+      /* ignore */
+    }
+    set({ baseLayer: id })
+  },
   setShowTerritorial: (v) => set({ showTerritorial: v }),
   setSeaStateField: (f) => set({ seaStateField: f }),
   setSeaStateRange: (r) => set({ seaStateRange: r }),
