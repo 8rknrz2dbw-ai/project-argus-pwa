@@ -59,8 +59,5 @@ export function clearConfig() {
 export const isSentinelConfigured = () => Boolean(getConfig().sentinelInstanceId)
 export const isEdgeAiConfigured = () => Boolean(getConfig().edgeAiUrl)
 export const isAisConfigured = () => Boolean(getConfig().aisKey)
-/** CWA 需同時有 Worker 網址（代理 CORS）與授權碼才可用。 */
-export const isCwaConfigured = () => {
-  const c = getConfig()
-  return Boolean(c.edgeAiUrl && c.cwaKey)
-}
+/** CWA 只要有授權碼即可（先試瀏覽器直連；直連被擋才需 Worker）。 */
+export const isCwaConfigured = () => Boolean(getConfig().cwaKey)
