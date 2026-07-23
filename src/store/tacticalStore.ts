@@ -120,6 +120,10 @@ interface TacticalState {
 
   // ── 我的位置 (GPS，跨模式保留) ──────────────────────
   ownPosition: { lat: number; lng: number; accuracy: number } | null
+  /** 航跡記錄中（連續 GPS）。 */
+  trackRecording: boolean
+  /** 自船航跡點（搜索覆蓋麵包屑）。 */
+  ownTrack: { lat: number; lng: number }[]
 
   // ── 狀態列訊息（給海上人員的即時回饋）───────────────
   statusMessage: string
@@ -142,6 +146,9 @@ interface TacticalState {
   setRescueStatus: (s: TacticalState['rescueStatus']) => void
   setVessels: (v: Vessel[]) => void
   setOwnPosition: (p: TacticalState['ownPosition']) => void
+  toggleTrackRecording: () => void
+  pushTrackPoint: (p: { lat: number; lng: number }) => void
+  clearTrack: () => void
   setFlyTo: (t: { lat: number; lng: number; zoom?: number } | null) => void
   /** 跳到座標並記錄歷史（座標查詢/清單點擊共用）。 */
   gotoCoord: (lat: number, lng: number, zoom?: number) => void
@@ -215,6 +222,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   measuring: false,
   measurePoints: [],
   ownPosition: null,
+  trackRecording: false,
+  ownTrack: [],
   showTerritorial: false,
   statusMessage: '軌道預警模式待命中',
 
@@ -267,6 +276,20 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setRescueStatus: (s) => set({ rescueStatus: s }),
   setVessels: (v) => set({ vessels: v }),
   setOwnPosition: (p) => set({ ownPosition: p }),
+  toggleTrackRecording: () =>
+    set((st) => ({ trackRecording: !st.trackRecording, ownTrack: st.trackRecording ? st.ownTrack : [] })),
+  pushTrackPoint: (p) =>
+    set((st) => {
+      const last = st.ownTrack[st.ownTrack.length - 1]
+      // 去抖：距上一點 <15m 不記，避免原地漂移塞爆
+      if (last) {
+        const dLat = (p.lat - last.lat) * 111000
+        const dLng = (p.lng - last.lng) * 111000 * Math.cos(last.lat * 0.0174533)
+        if (Math.hypot(dLat, dLng) < 15) return {}
+      }
+      return { ownTrack: [...st.ownTrack, p] }
+    }),
+  clearTrack: () => set({ ownTrack: [] }),
   setFlyTo: (t) => set({ flyToTarget: t }),
   gotoCoord: (lat, lng, zoom) =>
     set((st) => {
