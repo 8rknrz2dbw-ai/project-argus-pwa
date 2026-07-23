@@ -82,7 +82,13 @@ export async function fetchGdacsTyphoon(): Promise<Typhoon | null> {
   }
 }
 
-/** 抓 GDACS 事件幾何，擷取路徑點（觀測+預報）。防禦性；對不上就回目前位置。 */
+/**
+ * 抓 GDACS 事件幾何，擷取「觀測＋預報路徑」。
+ * 穩健策略：改用 GeoJSON geometry.type 判斷（不再靠脆弱的 Class 字串）：
+ *   1) 有時間的 Point → 最佳（真實時刻的路徑點）
+ *   2) 沒時間但有 LineString 預報線 → 取線的頂點當路徑（時刻為估算）
+ *   3) 都沒有 → 只回目前位置
+ */
 async function fetchTrack(eventid: unknown, episodeid: unknown, cur: TyphoonPoint): Promise<TyphoonPoint[]> {
   if (!eventid) return [cur]
   const url = `https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=TC&eventid=${eventid}${
@@ -95,32 +101,102 @@ async function fetchTrack(eventid: unknown, episodeid: unknown, cur: TyphoonPoin
     const res = await fetch(url, { signal: ctrl.signal })
     if (!res.ok) return [cur]
     data = await res.json()
+  } catch {
+    return [cur]
   } finally {
     clearTimeout(timeout)
   }
   const now = Date.now()
   const feats: any[] = data?.features ?? []
-  const pts: TyphoonPoint[] = []
-  for (const f of feats) {
-    const cls = String(f?.properties?.Class ?? f?.properties?.class ?? '')
-    if (!/point/i.test(cls)) continue // 只取路徑點，略過線/多邊形
-    const g = f?.geometry?.coordinates
-    if (!Array.isArray(g) || g.length < 2) continue
-    const pr = f.properties ?? {}
-    const t = Date.parse(pr.trackdate ?? pr.dateTime ?? pr.date ?? '')
-    const hours = Number.isFinite(t) ? Math.round((t - now) / 3600000) : 0
-    const w = num(pr.windspeed, NaN)
-    const windKt = Number.isFinite(w) ? w / 1.852 : cur.windKt
-    pts.push({
-      lat: num(g[1]),
-      lng: num(g[0]),
-      hours,
-      windKt: Math.round(windKt),
-      galeRadiusKm: galeFromWindKt(windKt),
-      cat: catOf(windKt),
-    })
+  const timed: TyphoonPoint[] = []
+  const untimed: TyphoonPoint[] = []
+  const line: [number, number][] = []
+
+  const toPoint = (lat: number, lng: number, pr: any): { pt: TyphoonPoint; hasTime: boolean } | null => {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+    const t = parseTrackDate(pr)
+    const hasTime = Number.isFinite(t)
+    const w = num(pr?.windspeed ?? pr?.wind ?? pr?.maxwind ?? pr?.severity, NaN)
+    // GDACS 風速多為 km/h；>90 視為 km/h 換算成 kt，否則當作已是 kt。
+    const windKt = Number.isFinite(w) ? Math.round(w > 90 ? w / 1.852 : w) : cur.windKt
+    return {
+      hasTime,
+      pt: {
+        lat,
+        lng,
+        hours: hasTime ? Math.round((t - now) / 3600000) : 0,
+        windKt,
+        galeRadiusKm: galeFromWindKt(windKt),
+        cat: catOf(windKt),
+      },
+    }
   }
-  if (pts.length < 2) return [cur]
-  pts.sort((a, b) => a.hours - b.hours)
-  return pts
+
+  for (const f of feats) {
+    const geom = f?.geometry
+    const pr = f?.properties ?? {}
+    if (!geom) continue
+    if (geom.type === 'Point' && Array.isArray(geom.coordinates)) {
+      const r = toPoint(num(geom.coordinates[1]), num(geom.coordinates[0]), pr)
+      if (r) (r.hasTime ? timed : untimed).push(r.pt)
+    } else if (geom.type === 'LineString' && Array.isArray(geom.coordinates)) {
+      for (const c of geom.coordinates) if (Array.isArray(c) && c.length >= 2) line.push([num(c[1]), num(c[0])])
+    } else if (geom.type === 'MultiLineString' && Array.isArray(geom.coordinates)) {
+      for (const seg of geom.coordinates) for (const c of seg ?? []) if (Array.isArray(c) && c.length >= 2) line.push([num(c[1]), num(c[0])])
+    }
+  }
+
+  // 1) 有時刻的路徑點最可靠
+  if (timed.length >= 2) return mergeCurrent(timed, cur)
+  // 2) 預報線頂點（時刻估算）
+  const lineTrack = lineToTrack(line.filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b)), cur)
+  if (lineTrack.length >= 2) return lineTrack
+  // 3) 無時刻的點（至少畫出路徑形狀）
+  if (untimed.length >= 2) return mergeCurrent(untimed, cur)
+  return [cur]
+}
+
+/** 從任意屬性找出可解析的日期字串（欄名含 date/time）。 */
+function parseTrackDate(pr: any): number {
+  if (!pr || typeof pr !== 'object') return NaN
+  for (const [k, v] of Object.entries(pr)) {
+    if (typeof v === 'string' && /date|time/i.test(k)) {
+      const t = Date.parse(v)
+      if (Number.isFinite(t)) return t
+    }
+  }
+  return NaN
+}
+
+/** 併入目前位置（若路徑缺 ~0h 點），並依時刻排序。 */
+function mergeCurrent(pts: TyphoonPoint[], cur: TyphoonPoint): TyphoonPoint[] {
+  const hasNow = pts.some((p) => Math.abs(p.hours) <= 2)
+  const out = hasNow ? pts.slice() : [cur, ...pts]
+  return out.sort((a, b) => a.hours - b.hours)
+}
+
+/** 預報線頂點 → 路徑點：以最接近現在位置的頂點為起點，往後估 ~72h 展開。 */
+function lineToTrack(coords: [number, number][], cur: TyphoonPoint): TyphoonPoint[] {
+  if (coords.length < 2) return []
+  // 找最接近目前位置的頂點當「現在」
+  let ni = 0
+  let nd = Infinity
+  coords.forEach(([la, lo], i) => {
+    const d = (la - cur.lat) ** 2 + (lo - cur.lng) ** 2
+    if (d < nd) {
+      nd = d
+      ni = i
+    }
+  })
+  // 取「現在→線尾」為預報段；太短就用整條線
+  const seg = coords.length - ni >= 2 ? coords.slice(ni) : coords
+  // 降採樣到 ≤7 點
+  const step = Math.max(1, Math.floor(seg.length / 6))
+  const picks = seg.filter((_, i) => i % step === 0)
+  if (picks[picks.length - 1] !== seg[seg.length - 1]) picks.push(seg[seg.length - 1])
+  const span = 72 // 估算預報時程（h）
+  return picks.map((c, i) => {
+    const hours = picks.length > 1 ? Math.round((i / (picks.length - 1)) * span) : 0
+    return { lat: c[0], lng: c[1], hours, windKt: cur.windKt, galeRadiusKm: cur.galeRadiusKm, cat: cur.cat }
+  })
 }
