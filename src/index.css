@@ -64,6 +64,33 @@ body,
   top: calc(0.5rem + env(safe-area-inset-top) + 26rem);
   right: calc(0.75rem + env(safe-area-inset-right));
 }
+/* 第 9 格（現場點位/搜尋） */
+.safe-float-top9 {
+  top: calc(0.5rem + env(safe-area-inset-top) + 29.4rem);
+  right: calc(0.75rem + env(safe-area-inset-right));
+}
+/* 自訂點位記號（emoji + 群組色框）＋ 標籤 */
+.poi-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  font-size: 17px;
+  line-height: 1;
+  background: rgba(15, 23, 42, 0.85);
+  border: 2px solid #22d3ee;
+  border-radius: 50%;
+}
+.poi-label {
+  margin-top: 1px;
+  font: 700 10px ui-monospace, monospace;
+  text-align: center;
+  white-space: nowrap;
+  text-shadow: 0 0 3px #000, 0 0 3px #000;
+  transform: translateX(-50%);
+  margin-left: 15px;
+}
 /* 量測段標籤 */
 .measure-label {
   font: 700 10px ui-monospace, monospace;
