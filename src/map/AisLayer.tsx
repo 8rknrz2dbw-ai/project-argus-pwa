@@ -34,11 +34,14 @@ export function AisLayer({ map }: { map: L.Map }) {
     // 進 AIS 若地圖放太大（看不到船），自動縮到台灣周邊範圍。
     if (map.getZoom() > 8) map.fitBounds(TW_BOUNDS)
 
-    const unsub = subscribeAIS((vessels) => {
-      setVessels(vessels)
-      group.clearLayers()
-      for (const v of vessels) drawVessel(group, v)
-    })
+    const unsub = subscribeAIS(
+      (vessels) => {
+        setVessels(vessels)
+        group.clearLayers()
+        for (const v of vessels) drawVessel(group, v)
+      },
+      (s) => setStatus(s), // 連線狀態回報到狀態列
+    )
 
     return () => {
       unsub() // 取消訂閱：關 WebSocket / 清 interval

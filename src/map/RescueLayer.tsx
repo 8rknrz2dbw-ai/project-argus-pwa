@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import { useTacticalStore } from '../store/tacticalStore'
-import { fetchEnvAt, fetchEnvGrid, type MarineEnv } from '../lib/marineEnv'
+import { fetchEnvAt, fetchEnvGrid, climatologyCurrent, type MarineEnv } from '../lib/marineEnv'
 import { bearingToText } from '../lib/drift'
 import { buildSearchPattern } from '../lib/searchPattern'
 import {
@@ -11,6 +11,7 @@ import {
 } from '../lib/marineSeries'
 import { isCwaConfigured } from '../lib/config'
 import { fetchCwaTide } from '../lib/cwaMarine'
+import { fmtClock, fmtClockShort, driftEpoch } from '../lib/timefmt'
 
 /**
  * 搜救推演圖層。只在 rescue 模式運行：
@@ -162,6 +163,8 @@ export function RescueLayer({ map }: { map: L.Map }) {
     }
     drawManOverboard(drift, manOverboard.lat, manOverboard.lng, reverse)
     if (!rescueSeries) return
+    // 離線(氣候平均)時用「空間黑潮場」逐步取流→軌跡隨位置彎曲，不再假直線。
+    const spatial = rescueSeries.live ? undefined : climatologyCurrent
     // 用逐時真實海象「時變積分」（比單一快照外推準）。
     const points = integrateDriftSeries(
       manOverboard.lat,
@@ -171,8 +174,23 @@ export function RescueLayer({ map }: { map: L.Map }) {
       [1, 6, 12, 24, 48, 72],
       driftLeeway,
       reverse,
+      0,
+      spatial,
     )
-    drawDrift(drift, manOverboard.lat, manOverboard.lng, points, reverse)
+    // 逐時完整路徑（每小時一點）→ 畫成「彎曲」軌跡，隨風/流方向轉折，不再是假直線。
+    const fullHours = Array.from({ length: 72 }, (_, i) => i + 1)
+    const fullPath = integrateDriftSeries(
+      manOverboard.lat,
+      manOverboard.lng,
+      rescueSeries,
+      baseEpoch,
+      fullHours,
+      driftLeeway,
+      reverse,
+      0,
+      spatial,
+    )
+    drawDrift(drift, manOverboard.lat, manOverboard.lng, points, fullPath, reverse, incidentTime)
     setDriftPoints(points)
 
     // 順推且回報時間在過去 → 標出「現在」的預測位置（最重要）。
@@ -186,6 +204,8 @@ export function RescueLayer({ map }: { map: L.Map }) {
         [Math.min(72, Math.round(elapsedH))],
         driftLeeway,
         false,
+        0,
+        spatial,
       )
       if (nowP) drawNowMarker(drift, nowP.lat, nowP.lng, elapsedH, nowP.radiusMeters)
     }
@@ -216,6 +236,8 @@ export function RescueLayer({ map }: { map: L.Map }) {
         [scrubHours],
         driftLeeway,
         reverse,
+        0,
+        rescueSeries.live ? undefined : climatologyCurrent,
       )
       if (!p) return
       L.circle([p.lat, p.lng], {
@@ -228,9 +250,9 @@ export function RescueLayer({ map }: { map: L.Map }) {
       L.marker([p.lat, p.lng], {
         icon: L.divIcon({
           className: '',
-          html: `<div class="scrub-label">${scrubHours}h ${reverse ? '前' : '後'}</div>`,
-          iconSize: [46, 18],
-          iconAnchor: [23, 9],
+          html: `<div class="scrub-label">${fmtClock(driftEpoch(incidentTime, scrubHours, reverse, Date.now()))}<br/><span style="opacity:.75">${reverse ? '−' : '+'}${scrubHours}h</span></div>`,
+          iconSize: [86, 28],
+          iconAnchor: [43, 14],
         }),
         zIndexOffset: 1100,
       }).addTo(g)
@@ -261,6 +283,7 @@ export function RescueLayer({ map }: { map: L.Map }) {
       leeway: driftLeeway,
       reverse,
       n: 800,
+      spatialCurrent: rescueSeries.live ? undefined : climatologyCurrent,
     })
     // 機率密度格：越密→越紅
     for (const cell of mc.cells) {
@@ -474,10 +497,16 @@ function drawDrift(
   lat0: number,
   lng0: number,
   points: { hours: number; lat: number; lng: number; radiusMeters: number }[],
+  fullPath: { hours: number; lat: number; lng: number }[],
   reverse: boolean,
+  incidentTime: number,
 ) {
-  // 漂流/回推軌跡線
-  const line: [number, number][] = [[lat0, lng0], ...points.map((p) => [p.lat, p.lng] as [number, number])]
+  const now = Date.now()
+  // 漂流/回推軌跡線：用「每小時」完整路徑，隨風/流方向轉折成真實曲線（非直線）。
+  const line: [number, number][] = [
+    [lat0, lng0],
+    ...fullPath.map((p) => [p.lat, p.lng] as [number, number]),
+  ]
   L.polyline(line, { color: '#f43f5e', weight: 2, dashArray: '6 4' }).addTo(group)
 
   points.forEach((p, i) => {
@@ -491,13 +520,13 @@ function drawDrift(
       fillColor: '#f43f5e',
       fillOpacity: emphasis ? 0.12 : 0.06,
     }).addTo(group)
-    // 時間標籤（前/後）
+    // 時間標籤：顯示實際日期時間（比 +Nh 直覺），下方小字附相對時
     L.marker([p.lat, p.lng], {
       icon: L.divIcon({
         className: '',
-        html: `<div class="drift-label">${p.hours}h${reverse ? '前' : ''}</div>`,
-        iconSize: [34, 18],
-        iconAnchor: [17, 9],
+        html: `<div class="drift-label">${fmtClockShort(driftEpoch(incidentTime, p.hours, reverse, now))}<br/><span style="opacity:.7">${reverse ? '−' : '+'}${p.hours}h</span></div>`,
+        iconSize: [66, 26],
+        iconAnchor: [33, 13],
       }),
     }).addTo(group)
   })

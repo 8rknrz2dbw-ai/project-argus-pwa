@@ -5,6 +5,7 @@ import { buildReport, shareReport } from '../lib/report'
 import { SatelliteQuickLinks } from './SatelliteQuickLinks'
 import { parseCoord } from '../lib/coordParse'
 import { sunTimes } from '../lib/sun'
+import { fmtClock, driftEpoch } from '../lib/timefmt'
 import { bearingDeg } from '../map/MeasureLayer'
 
 /**
@@ -346,7 +347,7 @@ export function RescueControls() {
         </div>
       )}
 
-      {/* 時間軸拉桿：拉到任意時間看漂流位置 */}
+      {/* 時間軸拉桿：拉到任意時間看漂流位置（顯示實際日期時間）*/}
       {status === 'done' && drift.length > 0 && (
         <div>
           <div className="mb-1 flex items-center justify-between">
@@ -354,7 +355,9 @@ export function RescueControls() {
               ⏱ 時間軸（{reverse ? '往前回推' : '落海後經過'}）
             </label>
             <span className="font-mono text-[11px] text-amber-400">
-              {scrubHours === 0 ? '關' : `${scrubHours} 小時${reverse ? '前' : '後'}`}
+              {scrubHours === 0
+                ? '關'
+                : `${fmtClock(driftEpoch(incidentTime, scrubHours, reverse, Date.now()))}（${reverse ? '−' : '+'}${scrubHours}h）`}
             </span>
           </div>
           <input
