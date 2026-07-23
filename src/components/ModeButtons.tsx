@@ -15,6 +15,8 @@ const MODES: ModeDef[] = [
   { id: 'ais', icon: '📡', title: 'AIS 識別', subtitle: 'AIS · 即時船位' },
   { id: 'rescue', icon: '🆘', title: '搜救推演', subtitle: 'Rescue · 漂流預判' },
   { id: 'seastate', icon: '🌡️', title: '海況熱圖', subtitle: 'Sea · 海溫/浪高' },
+  { id: 'envanim', icon: '🎬', title: '環境動畫', subtitle: 'Anim · 風/洋流時序' },
+  { id: 'typhoon', icon: '🌀', title: '颱風路徑', subtitle: 'Typhoon · 暴風圈/路徑' },
 ]
 
 /**

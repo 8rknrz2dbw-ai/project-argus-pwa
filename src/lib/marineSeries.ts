@@ -94,9 +94,65 @@ export async function fetchHourlySeries(
   }
 }
 
+/**
+ * 一次抓「整個網格」的逐時序列（時間動畫用）。Open-Meteo 支援 comma 多座標，
+ * 一次請求拿回所有點的 hourly。回傳與 points 對齊的序列陣列。
+ */
+export async function fetchHourlySeriesGrid(
+  points: [number, number][],
+  pastDays = 2,
+  forecastDays = 3,
+): Promise<HourlySeries[]> {
+  if (points.length === 0) return []
+  const ctrl = new AbortController()
+  const timeout = setTimeout(() => ctrl.abort(), 12000)
+  const lats = points.map((p) => p[0].toFixed(3)).join(',')
+  const lngs = points.map((p) => p[1].toFixed(3)).join(',')
+  const q = `&past_days=${pastDays}&forecast_days=${forecastDays}`
+  try {
+    const wUrl = `${WEATHER}?latitude=${lats}&longitude=${lngs}&hourly=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms${q}`
+    const mUrl = `${MARINE}?latitude=${lats}&longitude=${lngs}&hourly=ocean_current_velocity,ocean_current_direction${q}`
+    const [w, m] = await Promise.all([
+      fetch(wUrl, { signal: ctrl.signal }).then((r) => r.json()),
+      fetch(mUrl, { signal: ctrl.signal }).then((r) => r.json()),
+    ])
+    const wArr = Array.isArray(w) ? w : [w]
+    const mArr = Array.isArray(m) ? m : [m]
+    return points.map((_, i) => {
+      const wh = wArr[i]?.hourly
+      const mh = mArr[i]?.hourly
+      const times: number[] = (wh?.time ?? []).map(toEpoch)
+      return {
+        times,
+        windSpeed: (wh?.wind_speed_10m ?? []).map((v: number) => numOr(v, 5)),
+        windDir: (wh?.wind_direction_10m ?? []).map((v: number) => numOr(v, 225)),
+        currentSpeed: (mh?.ocean_current_velocity ?? times.map(() => 1.08)).map(
+          (v: number) => numOr(v, 1.08) / 3.6,
+        ),
+        currentDir: (mh?.ocean_current_direction ?? times.map(() => 20)).map((v: number) =>
+          numOr(v, 20),
+        ),
+        live: times.length > 0,
+      } as HourlySeries
+    })
+  } catch {
+    return points.map(() => ({
+      times: [],
+      windSpeed: [],
+      windDir: [],
+      currentSpeed: [],
+      currentDir: [],
+      live: false,
+    }))
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 function nowEpoch(): number {
   return Date.now()
 }
+export { fieldAt }
 function numOr(v: unknown, d: number): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : d
 }
