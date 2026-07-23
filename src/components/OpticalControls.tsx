@@ -1,5 +1,6 @@
 import { useTacticalStore } from '../store/tacticalStore'
 import { isSentinelConfigured } from '../lib/sentinel'
+import { SatelliteQuickLinks } from './SatelliteQuickLinks'
 
 /**
  * 光學模式的控制項：影像來源提示 + 雲量滑桿 + 歷史觀測日期。
@@ -12,6 +13,7 @@ export function OpticalControls() {
   const setObservationDate = useTacticalStore((s) => s.setObservationDate)
   const opticalSource = useTacticalStore((s) => s.opticalSource)
   const setOpticalSource = useTacticalStore((s) => s.setOpticalSource)
+  const own = useTacticalStore((s) => s.ownPosition)
   const today = new Date().toISOString().slice(0, 10)
   const hd = isSentinelConfigured()
 
@@ -85,6 +87,14 @@ export function OpticalControls() {
           className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1.5 font-mono text-sm text-slate-200"
         />
       </div>
+
+      {/* 想要更高解析/雷達？一鍵開各免費衛星檔案瀏覽器 */}
+      <SatelliteQuickLinks
+        lat={own?.lat}
+        lng={own?.lng}
+        date={observationDate}
+        title="🛰️ 想更清楚？開免費衛星檔案（雷達/高解析）"
+      />
     </div>
   )
 }

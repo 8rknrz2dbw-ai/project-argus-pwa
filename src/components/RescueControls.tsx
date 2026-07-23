@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTacticalStore } from '../store/tacticalStore'
 import { bearingToText, DRIFT_TARGETS } from '../lib/drift'
 import { buildReport, shareReport } from '../lib/report'
+import { SatelliteQuickLinks } from './SatelliteQuickLinks'
 
 /**
  * 搜救推演控制面板：顯示即時海象摘要 + 漂流結果，並提示操作。
@@ -340,6 +341,15 @@ export function RescueControls() {
             可拉到 72 小時（3 天）。超過數小時為近似，風流會隨時間變化。
           </p>
         </div>
+      )}
+
+      {/* 免費衛星最新過境查詢（以標記點為中心）*/}
+      {mob && (
+        <SatelliteQuickLinks
+          lat={mob.lat}
+          lng={mob.lng}
+          title="🛰️ 查此漂流位置的免費衛星影像"
+        />
       )}
 
       {/* 我的位置 → 落海點 距離 */}
