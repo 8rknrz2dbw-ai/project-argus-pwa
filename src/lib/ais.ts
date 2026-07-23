@@ -97,14 +97,22 @@ function subscribeReal(onUpdate: Listener, key: string, onStatus?: StatusListene
           FilterMessageTypes: ['PositionReport', 'ShipStaticData'],
         }),
       )
-      // 15 秒內沒任何資料 → 提示可能金鑰或範圍問題。
+      // 15 秒內完全沒有任何訊息（連錯誤都沒有）→ 幾乎必為金鑰/連線數問題。
       if (noDataTimer) clearTimeout(noDataTimer)
       noDataTimer = setTimeout(() => {
-        if (!gotAny) status('AIS：已連線但 15 秒無船位——請確認 AISStream 金鑰正確／未超額')
+        if (!gotAny)
+          status(
+            'AIS：已連線但持續無回應。最可能：①同一金鑰在其它裝置/分頁也開著（免費版限 1 連線，請只留一處）②金鑰打錯/無效 ③額度用盡。到 aisstream.io 核對。',
+          )
       }, 15000)
     }
 
     ws.onmessage = (ev) => {
+      // 收到任何訊息（含錯誤）就取消「15 秒無回應」計時，避免通用訊息蓋掉真實原因。
+      if (noDataTimer) {
+        clearTimeout(noDataTimer)
+        noDataTimer = null
+      }
       try {
         const msg = JSON.parse(ev.data as string)
         // aisstream 若金鑰無效/超額/訂閱格式錯，會回一段 error 文字——攤開給使用者看。
@@ -114,7 +122,14 @@ function subscribeReal(onUpdate: Listener, key: string, onStatus?: StatusListene
         }
         const type = msg?.MessageType
         const meta = msg?.MetaData
-        if (!meta) return
+        // 非船位訊息（多為伺服器提示/錯誤）：把原文攤開，最有助於排查。
+        if (!meta) {
+          if (!gotAny) {
+            const raw = (typeof ev.data === 'string' ? ev.data : '').slice(0, 160)
+            if (raw) status(`AIS：伺服器回應非船位訊息——${raw}`)
+          }
+          return
+        }
         const mmsi = String(meta.MMSI ?? meta.mmsi ?? '')
         if (!mmsi) return
         const prev = byMmsi.get(mmsi)
