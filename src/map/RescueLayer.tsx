@@ -63,7 +63,8 @@ export function RescueLayer({ map }: { map: L.Map }) {
       if (!fieldRef.current) return // 期間已卸載
       field.clearLayers()
       for (const e of envs) drawEnvArrows(field, e)
-      if (envs[0] && !envs[0].live) setStatus('搜救推演：海象資料源離線，使用預設值')
+      if (envs[0] && !envs[0].live)
+        setStatus('搜救推演：即時海象離線，改用黑潮氣候平均（隨位置變化，非即時）')
     }
 
     const onMoveEnd = () => {
@@ -181,7 +182,7 @@ export function RescueLayer({ map }: { map: L.Map }) {
     const last = points[points.length - 1]
     const when = reverse ? `${last.hours}h 前` : `${last.hours}h 後`
     const verb = reverse ? '回推來源' : '漂流預判'
-    const src = rescueSeries.live ? '逐時歷史/預報海象' : '離線預設'
+    const src = rescueSeries.live ? '逐時歷史/預報海象' : '黑潮氣候平均(離線)'
     setStatus(
       `${verb}(${src})：${when}約在 ${bearingToText(last.bearingDeg)}方 ${(last.driftMeters / 1852).toFixed(1)} 浬，半徑 ${(last.radiusMeters / 1852).toFixed(1)} 浬`,
     )

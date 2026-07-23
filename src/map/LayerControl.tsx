@@ -3,7 +3,7 @@ import L from 'leaflet'
 import { useTacticalStore } from '../store/tacticalStore'
 import { SatelliteCanvasLayer } from './SatelliteCanvasLayer'
 import { buildWmsConfig, LAYERS, isSentinelConfigured } from '../lib/sentinel'
-import { buildGibsTrueColor, buildEsriImagery } from '../lib/gibs'
+import { buildGibsTrueColor, buildEsriImagery, buildS2Cloudless } from '../lib/gibs'
 import type { DetectionCollection } from '../types'
 
 /**
@@ -83,15 +83,35 @@ export function LayerControl({ map }: { map: L.Map }) {
     function mountGibs() {
       if (opticalSource === 'esri') {
         const esri = buildEsriImagery()
-        esri.on('load', () => setStatus('高解析衛星影像（Esri · 放大清晰、非每日）'))
+        esri.on('load', () => setStatus('高解析空拍影像（Esri · 岸際最銳利、非每日）'))
         esri.addTo(map)
         tileRef.current = esri
-        setStatus('載入高解析衛星影像中（Esri）…')
+        setStatus('載入高解析空拍影像中（Esri）…')
+        return
+      }
+      if (opticalSource === 'eox') {
+        const eox = buildS2Cloudless()
+        let eoxErr = 0
+        eox.on('load', () => setStatus('Sentinel-2 無雲真彩色（10m · 乾淨平滑、非每日）'))
+        eox.on('tileerror', () => {
+          eoxErr++
+          // EOX 若無回應 → 自動退回 Esri，不讓使用者卡住。
+          if (eoxErr === 3) {
+            removeTile()
+            const esri = buildEsriImagery()
+            esri.addTo(map)
+            tileRef.current = esri
+            setStatus('Sentinel-2 無雲來源無回應，已改用 Esri 高解析空拍')
+          }
+        })
+        eox.addTo(map)
+        tileRef.current = eox
+        setStatus('載入 Sentinel-2 無雲影像中（EOX · 免金鑰）…')
         return
       }
       const gibs = buildGibsTrueColor(observationDate)
       gibs.on('load', () =>
-        setStatus('每日衛星影像（NASA MODIS · 約 250m）。放大想更清晰請切「高解析」'),
+        setStatus('每日衛星影像（NASA MODIS · 約 250m）。放大想更清晰請切「高解析／無雲」'),
       )
       gibs.addTo(map)
       tileRef.current = gibs

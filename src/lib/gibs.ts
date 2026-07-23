@@ -26,6 +26,27 @@ export function buildEsriImagery(): L.TileLayer {
   )
 }
 
+/**
+ * EOX Sentinel-2 cloudless：免金鑰、免註冊的「全球無雲真彩色」鑲嵌影像。
+ * 由 Sentinel-2（10m）多時相合成去雲，畫面乾淨、放大到岸際仍平滑清晰，
+ * 沒有 MODIS 那種 250m 馬賽克。適合看海岸線/島礁/港口形狀。
+ * 授權：Sentinel-2 cloudless by EOX（CC BY 4.0，含 Copernicus Sentinel data）。
+ */
+export function buildS2Cloudless(): L.TileLayer {
+  // 用 KVP 形式的 WMTS，最穩定；年份用已發布的 2023 合成。
+  const url =
+    'https://tiles.maps.eox.at/wmts?layer=s2cloudless-2023_3857&style=default' +
+    '&tilematrixset=GoogleMapsCompatible&Service=WMTS&Request=GetTile&Version=1.0.0' +
+    '&Format=image%2Fjpeg&TileMatrix={z}&TileCol={x}&TileRow={y}'
+  return L.tileLayer(url, {
+    // s2cloudless 原生約到第 15–16 層（10m），再放大由 Leaflet 內插
+    maxNativeZoom: 16,
+    maxZoom: 19,
+    attribution: 'Sentinel-2 cloudless 2023 © EOX IT Services（含 Copernicus 資料）',
+    className: 'gibs-imagery',
+  })
+}
+
 /** 真彩色圖層（MODIS Terra，每日更新）。 */
 export function buildGibsTrueColor(date: string): L.TileLayer {
   const layer = 'MODIS_Terra_CorrectedReflectance_TrueColor'

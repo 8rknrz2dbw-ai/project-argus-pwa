@@ -10,6 +10,7 @@ import { EnvAnimLayer } from './EnvAnimLayer'
 import { TyphoonLayer } from './TyphoonLayer'
 import { LocateControl } from './LocateControl'
 import { OfflineControl } from './OfflineControl'
+import { TerritorialLayer, TerritorialToggle } from './TerritorialLayer'
 
 /**
  * MapContainer —— 唯一的地圖實體。
@@ -65,6 +66,8 @@ export function MapContainer() {
       {map && <TyphoonLayer map={map} />}
       {map && <LocateControl map={map} />}
       {map && <OfflineControl map={map} />}
+      {map && <TerritorialLayer map={map} />}
+      {map && <TerritorialToggle />}
     </div>
   )
 }

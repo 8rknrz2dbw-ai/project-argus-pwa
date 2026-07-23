@@ -15,35 +15,43 @@ export function OpticalControls() {
   const today = new Date().toISOString().slice(0, 10)
   const hd = isSentinelConfigured()
 
+  const SRC_INFO: Record<string, string> = {
+    esri: '高解析空拍鑲嵌 · 岸際/島礁最銳利（可放大到 ~z19，非每日、非即時）',
+    eox: 'Sentinel-2 無雲真彩色 · 10m 乾淨平滑、無雲遮蔽（年度合成，非每日）',
+    nasa: 'NASA MODIS 每日真彩色 · 約 250m，放大會馬賽克（可選歷史日期）',
+  }
+
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-slate-700 bg-tactical-panel/80 p-3">
       <div className="rounded border border-slate-700 bg-slate-900/60 px-2 py-1.5 text-[11px] leading-relaxed">
         {hd ? (
           <span className="text-tactical-green">🛰️ 高解析度：Sentinel-2（10m）· 雲量過濾生效</span>
         ) : (
-          <span className="text-tactical-cyan">🛰️ 免金鑰影像來源（貼 Sentinel 金鑰可升級 10m）</span>
+          <span className="text-tactical-cyan">🛰️ 免金鑰影像來源：{SRC_INFO[opticalSource]}</span>
         )}
       </div>
 
-      {/* 免金鑰時可切 每日(NASA) / 高解析(Esri) */}
+      {/* 免金鑰時可三選一：高解析空拍 / Sentinel-2無雲 / 每日MODIS */}
       {!hd && (
-        <div className="grid grid-cols-2 gap-1 rounded-lg border border-slate-700 p-1">
-          <button
-            onClick={() => setOpticalSource('nasa')}
-            className={`rounded py-1.5 text-xs font-bold active:scale-95 ${
-              opticalSource === 'nasa' ? 'bg-tactical-cyan/20 text-tactical-cyan' : 'text-slate-400'
-            }`}
-          >
-            每日影像 (NASA)
-          </button>
-          <button
-            onClick={() => setOpticalSource('esri')}
-            className={`rounded py-1.5 text-xs font-bold active:scale-95 ${
-              opticalSource === 'esri' ? 'bg-tactical-cyan/20 text-tactical-cyan' : 'text-slate-400'
-            }`}
-          >
-            高解析 (Esri)
-          </button>
+        <div className="grid grid-cols-3 gap-1 rounded-lg border border-slate-700 p-1">
+          {(
+            [
+              ['esri', '高解析', '空拍'],
+              ['eox', '無雲', 'S2·10m'],
+              ['nasa', '每日', 'MODIS'],
+            ] as const
+          ).map(([id, t1, t2]) => (
+            <button
+              key={id}
+              onClick={() => setOpticalSource(id)}
+              className={`flex flex-col items-center rounded py-1.5 active:scale-95 ${
+                opticalSource === id ? 'bg-tactical-cyan/20 text-tactical-cyan' : 'text-slate-400'
+              }`}
+            >
+              <span className="text-xs font-bold">{t1}</span>
+              <span className="text-[9px] opacity-70">{t2}</span>
+            </button>
+          ))}
         </div>
       )}
       <div>
