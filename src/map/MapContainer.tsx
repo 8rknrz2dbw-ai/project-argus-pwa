@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { LayerControl } from './LayerControl'
+import { BaseLayerControl } from './BaseLayerControl'
 import { BBoxSelector } from './BBoxSelector'
 import { AisLayer } from './AisLayer'
 import { RescueLayer } from './RescueLayer'
@@ -38,15 +39,7 @@ export function MapContainer() {
       preferCanvas: true,
     })
 
-    // Base Layer：CARTO dark_matter 真・深色底圖（軍事雷達幕質感）。
-    // 直接用專業深色圖磚，不再用 CSS invert 濾鏡（會把 OSM 洗成灰白）。
-    // 固定 subdomain 'a' 且非 retina，讓離線下載的 URL 與顯示用完全一致（才會命中快取）。
-    L.tileLayer('https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      detectRetina: false,
-      className: 'base-tiles-tactical',
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
-    }).addTo(m)
+    // Base Layer 改由 <BaseLayerControl> 依 store.baseLayer 管理（可切中文底圖）。
 
     // 手機以雙指縮放為主，移除佔版面的縮放按鈕；保留比例尺。
     L.control.scale({ imperial: false, position: 'bottomright' }).addTo(m)
@@ -62,6 +55,7 @@ export function MapContainer() {
     <div className="absolute inset-0">
       <div ref={elRef} className="h-full w-full" />
       <div className="radar-vignette" />
+      {map && <BaseLayerControl map={map} />}
       {map && <LayerControl map={map} />}
       {map && <BBoxSelector map={map} />}
       {map && <AisLayer map={map} />}
