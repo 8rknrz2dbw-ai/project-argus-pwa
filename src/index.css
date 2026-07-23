@@ -45,6 +45,11 @@ body,
   filter: brightness(0.9) contrast(1.05) saturate(1.1);
 }
 
+/* NASA GIBS 衛星影像：略提亮/增豔，讓它在深色主題上更明顯 */
+.gibs-imagery {
+  filter: brightness(1.15) contrast(1.12) saturate(1.25);
+}
+
 /* 雷達幕暈影：邊緣壓暗、中心透亮，營造圓形雷達掃描視覺（不擋操作）*/
 .radar-vignette {
   position: absolute;

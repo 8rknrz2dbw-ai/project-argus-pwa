@@ -105,20 +105,23 @@ export function RescueControls() {
       {status === 'done' && drift.length > 0 && (
         <div>
           <div className="mb-1 flex items-center justify-between">
-            <label className="text-[11px] font-semibold text-amber-400">⏱ 時間軸</label>
+            <label className="text-[11px] font-semibold text-amber-400">⏱ 時間軸（落海後經過）</label>
             <span className="font-mono text-[11px] text-amber-400">
-              {scrubHours === 0 ? '關' : `${scrubHours.toFixed(1)} 小時後`}
+              {scrubHours === 0 ? '關' : `${scrubHours} 小時後`}
             </span>
           </div>
           <input
             type="range"
             min={0}
-            max={6}
-            step={0.5}
+            max={24}
+            step={1}
             value={scrubHours}
             onChange={(e) => setScrubHours(Number(e.target.value))}
             className="w-full accent-amber-400"
           />
+          <p className="mt-1 text-[10px] text-slate-500">
+            可拉到 24 小時（適用數小時前落海）。超過數小時為近似，風流會隨時間變化。
+          </p>
         </div>
       )}
 
