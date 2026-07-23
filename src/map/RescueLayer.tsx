@@ -4,6 +4,7 @@ import { useTacticalStore } from '../store/tacticalStore'
 import { fetchEnvAt, fetchEnvGrid, type MarineEnv } from '../lib/marineEnv'
 import { predictDrift, bearingToText } from '../lib/drift'
 import { simulateMonteCarlo } from '../lib/montecarlo'
+import { buildSearchPattern } from '../lib/searchPattern'
 
 /**
  * 搜救推演圖層。只在 rescue 模式運行：
@@ -25,6 +26,11 @@ export function RescueLayer({ map }: { map: L.Map }) {
   const driftLeeway = useTacticalStore((s) => s.driftLeeway)
   const driftMode = useTacticalStore((s) => s.driftMode)
   const showProbability = useTacticalStore((s) => s.showProbability)
+  const showSearchPattern = useTacticalStore((s) => s.showSearchPattern)
+  const trackSpacingNm = useTacticalStore((s) => s.trackSpacingNm)
+  const mcSummary = useTacticalStore((s) => s.mcSummary)
+  const setMcSummary = useTacticalStore((s) => s.setMcSummary)
+  const driftPoints = useTacticalStore((s) => s.driftPoints)
   const setDriftPoints = useTacticalStore((s) => s.setDriftPoints)
   const reverse = driftMode === 'backward'
 
@@ -32,6 +38,7 @@ export function RescueLayer({ map }: { map: L.Map }) {
   const driftRef = useRef<L.LayerGroup | null>(null) // 落海點 + 漂流
   const scrubRef = useRef<L.LayerGroup | null>(null) // 時間軸 scrubber
   const probRef = useRef<L.LayerGroup | null>(null) // 蒙地卡羅機率密度
+  const searchRef = useRef<L.LayerGroup | null>(null) // 搜索航線
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -87,6 +94,11 @@ export function RescueLayer({ map }: { map: L.Map }) {
         probRef.current.clearLayers()
         map.removeLayer(probRef.current)
         probRef.current = null
+      }
+      if (searchRef.current) {
+        searchRef.current.clearLayers()
+        map.removeLayer(searchRef.current)
+        searchRef.current = null
       }
       fieldRef.current = null
       driftRef.current = null
@@ -172,7 +184,10 @@ export function RescueLayer({ map }: { map: L.Map }) {
     if (!probRef.current) probRef.current = L.layerGroup().addTo(map)
     const g = probRef.current
     g.clearLayers()
-    if (!showProbability || !manOverboard || !rescueEnv) return
+    if (!showProbability || !manOverboard || !rescueEnv) {
+      setMcSummary(null)
+      return
+    }
 
     const hours = scrubHours > 0 ? scrubHours : 6
     const mc = simulateMonteCarlo({
@@ -214,11 +229,61 @@ export function RescueLayer({ map }: { map: L.Map }) {
         )
         .addTo(g)
     }
+    setMcSummary({ peak: mc.peak, centroid: mc.centroid, radius95: mc.radius95 })
     setStatus(
       `蒙地卡羅機率圖：${hours}h${reverse ? '前' : '後'}，1200 粒子，95% 範圍半徑 ${(mc.radius95 / 1852).toFixed(1)} 浬`,
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, showProbability, manOverboard, rescueEnv, driftLeeway, reverse, scrubHours])
+
+  // ── 平行梳掃搜索航線 ──────────────────────────────────
+  useEffect(() => {
+    if (mode !== 'rescue') return
+    if (!searchRef.current) searchRef.current = L.layerGroup().addTo(map)
+    const g = searchRef.current
+    g.clearLayers()
+    if (!showSearchPattern || !manOverboard) return
+
+    // 搜索中心與半徑：優先用蒙地卡羅結果，否則用最後一個漂流點。
+    let center = mcSummary?.centroid ?? null
+    let radiusM = mcSummary?.radius95 ?? 0
+    if (!center) {
+      const last = driftPoints[driftPoints.length - 1]
+      if (last) {
+        center = { lat: last.lat, lng: last.lng }
+        radiusM = last.radiusMeters
+      }
+    }
+    if (!center || radiusM <= 0) return
+
+    const sp = buildSearchPattern({
+      centerLat: center.lat,
+      centerLng: center.lng,
+      radiusM,
+      spacingM: trackSpacingNm * 1852,
+    })
+    L.polyline(sp.path, { color: '#22d3ee', weight: 2, opacity: 0.9 }).addTo(g)
+    // 起點
+    if (sp.path[0]) {
+      L.marker(sp.path[0], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div class="search-start">▶</div>`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11],
+        }),
+        zIndexOffset: 1150,
+      })
+        .bindPopup(
+          `<b style="color:#22d3ee">搜索航線起點</b><br/>平行梳掃 ${sp.legs} 條腿｜間距 ${trackSpacingNm} 浬<br/>總航程 ${(sp.lengthM / 1852).toFixed(1)} 浬`,
+        )
+        .addTo(g)
+    }
+    setStatus(
+      `搜索航線：${sp.legs} 條梳掃腿，間距 ${trackSpacingNm} 浬，總航程 ${(sp.lengthM / 1852).toFixed(1)} 浬`,
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, showSearchPattern, trackSpacingNm, mcSummary, driftPoints, manOverboard])
 
   return null
 }

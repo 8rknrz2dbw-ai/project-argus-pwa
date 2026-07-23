@@ -19,21 +19,38 @@ export function RescueControls() {
   const setDriftMode = useTacticalStore((s) => s.setDriftMode)
   const showProbability = useTacticalStore((s) => s.showProbability)
   const setShowProbability = useTacticalStore((s) => s.setShowProbability)
+  const showSearchPattern = useTacticalStore((s) => s.showSearchPattern)
+  const setShowSearchPattern = useTacticalStore((s) => s.setShowSearchPattern)
+  const trackSpacingNm = useTacticalStore((s) => s.trackSpacingNm)
+  const setTrackSpacingNm = useTacticalStore((s) => s.setTrackSpacingNm)
   const reverse = driftMode === 'backward'
   const setMob = useTacticalStore((s) => s.setManOverboard)
   const setResult = useTacticalStore((s) => s.setRescueResult)
   const setStatus = useTacticalStore((s) => s.setStatus)
 
+  const mcSummary = useTacticalStore((s) => s.mcSummary)
+  const driftTargetLabel =
+    DRIFT_TARGETS.find((t) => t.id === driftTargetId)?.label ?? '落海人'
+
   const clear = () => {
     setMob(null)
     setResult(null, [])
     setScrubHours(0)
+    setShowProbability(false)
+    setShowSearchPattern(false)
     setStatus('搜救推演模式：點地圖標記落海點，計算漂流')
   }
 
   const share = async () => {
     if (!mob || !env) return
-    const text = buildReport({ mob, env, drift })
+    const text = buildReport({
+      mob,
+      env,
+      drift,
+      reverse,
+      targetLabel: driftTargetLabel,
+      mc: mcSummary ? { peak: mcSummary.peak, radius95: mcSummary.radius95 } : null,
+    })
     const how = await shareReport(text)
     setStatus(how === 'shared' ? '報告已分享' : how === 'copied' ? '報告已複製到剪貼簿' : '⚠ 分享失敗')
   }
@@ -83,7 +100,7 @@ export function RescueControls() {
       {/* 漂流物體類型（不同風壓係數）*/}
       <div>
         <div className="mb-1 text-[11px] font-semibold text-slate-400">漂流物體類型</div>
-        <div className="grid grid-cols-4 gap-1">
+        <div className="grid grid-cols-3 gap-1">
           {DRIFT_TARGETS.map((t) => {
             const active = driftTargetId === t.id
             return (
@@ -158,6 +175,41 @@ export function RescueControls() {
           在標記點周圍灑 1200 個亂數粒子，各依偏航±風壓差+風流漂流，紅=機率最高、◎=峰值。
           比單一圈更貼近真實搜索範圍（依國研院海洋中心搜救科學方法）。
         </p>
+      )}
+
+      {/* 平行梳掃搜索航線 */}
+      {status === 'done' && drift.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={() => setShowSearchPattern(!showSearchPattern)}
+            className={[
+              'rounded-lg border px-3 py-2 text-xs font-bold transition-all active:scale-95',
+              showSearchPattern
+                ? 'border-tactical-cyan bg-tactical-cyan/20 text-tactical-cyan'
+                : 'border-slate-600 bg-slate-900/60 text-slate-300',
+            ].join(' ')}
+          >
+            🧭 {showSearchPattern ? '關閉搜索航線' : '產生搜索航線 (平行梳掃)'}
+          </button>
+          {showSearchPattern && (
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-slate-400">航線間距</span>
+              {[0.5, 1, 2].map((nm) => (
+                <button
+                  key={nm}
+                  onClick={() => setTrackSpacingNm(nm)}
+                  className={`rounded border px-2 py-1 font-mono text-[11px] active:scale-95 ${
+                    trackSpacingNm === nm
+                      ? 'border-tactical-cyan text-tactical-cyan'
+                      : 'border-slate-600 text-slate-400'
+                  }`}
+                >
+                  {nm} 浬
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* 時間軸拉桿：拉到任意時間看漂流位置 */}

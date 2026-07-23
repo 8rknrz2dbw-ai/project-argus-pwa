@@ -114,6 +114,15 @@ body,
   box-shadow: 0 0 10px #38bdf8;
 }
 
+/* 搜索航線起點 */
+.search-start {
+  font-size: 16px;
+  line-height: 22px;
+  text-align: center;
+  color: #22d3ee;
+  text-shadow: 0 0 6px #22d3ee;
+}
+
 /* 蒙地卡羅最高機率點 */
 .mc-peak {
   font-size: 22px;
