@@ -10,6 +10,22 @@ import L from 'leaflet'
 
 const GIBS_BASE = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best'
 
+/**
+ * Esri World Imagery：免金鑰高解析度衛星/空拍鑲嵌影像，放大到岸邊很清晰
+ * （非每日、無雲層時效，但解析度遠高於 MODIS 250m）。適合「看清楚地形/島礁」。
+ */
+export function buildEsriImagery(): L.TileLayer {
+  return L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    {
+      maxZoom: 19,
+      maxNativeZoom: 19,
+      attribution: 'Imagery © Esri, Maxar, Earthstar Geographics',
+      className: 'gibs-imagery',
+    },
+  )
+}
+
 /** 真彩色圖層（MODIS Terra，每日更新）。 */
 export function buildGibsTrueColor(date: string): L.TileLayer {
   const layer = 'MODIS_Terra_CorrectedReflectance_TrueColor'

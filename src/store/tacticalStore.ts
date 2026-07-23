@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { BBox, DetectionCollection, TacticalMode } from '../types'
 import type { DriftPoint } from '../lib/drift'
 import type { MarineEnv } from '../lib/marineEnv'
+import type { HourlySeries } from '../lib/marineSeries'
 import type { Vessel } from '../lib/ais'
 
 /**
@@ -19,6 +20,8 @@ interface TacticalState {
   maxCloudCover: number
   /** 歷史觀測日期（YYYY-MM-DD）。 */
   observationDate: string
+  /** 免金鑰光學影像來源：nasa=每日MODIS(有雲層/較糊)、esri=高解析鑲嵌(清晰)。 */
+  opticalSource: 'nasa' | 'esri'
 
   // ── AI 分析結果 ─────────────────────────────────────
   detections: DetectionCollection | null
@@ -45,6 +48,10 @@ interface TacticalState {
   driftTargetId: string
   /** 漂流推演方向：forward=落海點往未來漂；backward=發現點回推來源。 */
   driftMode: 'forward' | 'backward'
+  /** 回報/落海時間（epoch ms）。可為過去，用逐時歷史海象積分。 */
+  incidentTime: number
+  /** 該點的逐時風/洋流序列（時變漂流用）。 */
+  rescueSeries: HourlySeries | null
   /** 是否顯示蒙地卡羅機率密度圖 (SAROPS 式)。 */
   showProbability: boolean
   /** 蒙地卡羅結果摘要（峰值/質心/95% 半徑 m），供搜索航線與報告使用。 */
@@ -75,6 +82,7 @@ interface TacticalState {
   setMode: (mode: TacticalMode) => void
   setMaxCloudCover: (v: number) => void
   setObservationDate: (d: string) => void
+  setOpticalSource: (s: 'nasa' | 'esri') => void
   setDetections: (d: DetectionCollection | null) => void
   setAiStatus: (s: TacticalState['aiStatus'], error?: string | null) => void
   setSelecting: (v: boolean) => void
@@ -90,6 +98,8 @@ interface TacticalState {
   setDriftTarget: (id: string, leeway: number) => void
   setDriftPoints: (points: DriftPoint[]) => void
   setDriftMode: (m: 'forward' | 'backward') => void
+  setIncidentTime: (t: number) => void
+  setRescueSeries: (s: HourlySeries | null) => void
   setShowProbability: (v: boolean) => void
   setMcSummary: (s: TacticalState['mcSummary']) => void
   setShowSearchPattern: (v: boolean) => void
@@ -103,6 +113,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   mode: 'orbit',
   maxCloudCover: 20,
   observationDate: today,
+  opticalSource: 'nasa',
   detections: null,
   aiStatus: 'idle',
   aiError: null,
@@ -116,6 +127,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   driftLeeway: 0.014,
   driftTargetId: 'piw',
   driftMode: 'forward',
+  incidentTime: Date.now(),
+  rescueSeries: null,
   showProbability: false,
   mcSummary: null,
   showSearchPattern: false,
@@ -143,6 +156,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
       driftLeeway: 0.014,
       driftTargetId: 'piw',
       driftMode: 'forward',
+      incidentTime: Date.now(),
+      rescueSeries: null,
       showProbability: false,
       mcSummary: null,
       showSearchPattern: false,
@@ -153,6 +168,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
 
   setMaxCloudCover: (v) => set({ maxCloudCover: v }),
   setObservationDate: (d) => set({ observationDate: d }),
+  setOpticalSource: (s) => set({ opticalSource: s }),
   setDetections: (d) => set({ detections: d }),
   setAiStatus: (s, error = null) => set({ aiStatus: s, aiError: error }),
   setSelecting: (v) => set({ selecting: v }),
@@ -168,6 +184,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setDriftTarget: (id, leeway) => set({ driftTargetId: id, driftLeeway: leeway }),
   setDriftPoints: (points) => set({ driftPoints: points }),
   setDriftMode: (m) => set({ driftMode: m }),
+  setIncidentTime: (t) => set({ incidentTime: t }),
+  setRescueSeries: (s) => set({ rescueSeries: s }),
   setShowProbability: (v) => set({ showProbability: v }),
   setMcSummary: (s) => set({ mcSummary: s }),
   setShowSearchPattern: (v) => set({ showSearchPattern: v }),

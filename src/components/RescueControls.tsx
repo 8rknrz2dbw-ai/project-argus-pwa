@@ -18,6 +18,8 @@ export function RescueControls() {
   const setDriftTarget = useTacticalStore((s) => s.setDriftTarget)
   const driftMode = useTacticalStore((s) => s.driftMode)
   const setDriftMode = useTacticalStore((s) => s.setDriftMode)
+  const incidentTime = useTacticalStore((s) => s.incidentTime)
+  const setIncidentTime = useTacticalStore((s) => s.setIncidentTime)
   const showProbability = useTacticalStore((s) => s.showProbability)
   const setShowProbability = useTacticalStore((s) => s.setShowProbability)
   const showSearchPattern = useTacticalStore((s) => s.showSearchPattern)
@@ -96,6 +98,35 @@ export function RescueControls() {
           逆推 · 發現→從哪來
         </button>
       </div>
+
+      {/* 回報/落海時間（可為過去，用逐時歷史海象積分）*/}
+      {!reverse && (
+        <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-2">
+          <div className="mb-1 flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-amber-400">🕐 回報/落海時間</span>
+            <button
+              onClick={() => setIncidentTime(Date.now())}
+              className="rounded border border-slate-600 px-2 py-0.5 text-[10px] text-slate-300 active:scale-95"
+            >
+              設為現在
+            </button>
+          </div>
+          <input
+            type="datetime-local"
+            max={toLocalInput(Date.now())}
+            value={toLocalInput(incidentTime)}
+            onChange={(e) => {
+              const t = new Date(e.target.value).getTime()
+              if (Number.isFinite(t)) setIncidentTime(t)
+            }}
+            className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1.5 font-mono text-xs text-slate-200"
+          />
+          <p className="mt-1 text-[10px] text-slate-500">
+            {elapsedHint(incidentTime)}
+            ｜用「該時刻到現在」的逐時真實海流/風積分，⌖綠圈=目標現在位置
+          </p>
+        </div>
+      )}
 
       {/* 手動輸入座標 */}
       <div>
@@ -329,6 +360,19 @@ export function RescueControls() {
       </div>
     </div>
   )
+}
+
+/** epoch → datetime-local input 字串（本地時區）。 */
+function toLocalInput(epoch: number): string {
+  const d = new Date(epoch - new Date(epoch).getTimezoneOffset() * 60000)
+  return d.toISOString().slice(0, 16)
+}
+/** 距今多久的提示。 */
+function elapsedHint(epoch: number): string {
+  const h = (Date.now() - epoch) / 3600000
+  if (h < 0.5) return '即時（現在）'
+  if (h < 24) return `回報距今約 ${h.toFixed(1)} 小時`
+  return `回報距今約 ${(h / 24).toFixed(1)} 天`
 }
 
 /** 兩點大圓距離（海浬）。 */

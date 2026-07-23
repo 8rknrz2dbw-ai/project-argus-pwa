@@ -2,9 +2,13 @@ import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import { useTacticalStore } from '../store/tacticalStore'
 import { fetchEnvAt, fetchEnvGrid, type MarineEnv } from '../lib/marineEnv'
-import { predictDrift, bearingToText } from '../lib/drift'
-import { simulateMonteCarlo } from '../lib/montecarlo'
+import { bearingToText } from '../lib/drift'
 import { buildSearchPattern } from '../lib/searchPattern'
+import {
+  fetchHourlySeries,
+  integrateDriftSeries,
+  monteCarloSeries,
+} from '../lib/marineSeries'
 
 /**
  * 搜救推演圖層。只在 rescue 模式運行：
@@ -21,7 +25,6 @@ export function RescueLayer({ map }: { map: L.Map }) {
   const setStatus = useTacticalStore((s) => s.setStatus)
 
   const manOverboard = useTacticalStore((s) => s.manOverboard)
-  const rescueEnv = useTacticalStore((s) => s.rescueEnv)
   const scrubHours = useTacticalStore((s) => s.scrubHours)
   const driftLeeway = useTacticalStore((s) => s.driftLeeway)
   const driftMode = useTacticalStore((s) => s.driftMode)
@@ -32,7 +35,12 @@ export function RescueLayer({ map }: { map: L.Map }) {
   const setMcSummary = useTacticalStore((s) => s.setMcSummary)
   const driftPoints = useTacticalStore((s) => s.driftPoints)
   const setDriftPoints = useTacticalStore((s) => s.setDriftPoints)
+  const incidentTime = useTacticalStore((s) => s.incidentTime)
+  const rescueSeries = useTacticalStore((s) => s.rescueSeries)
+  const setRescueSeries = useTacticalStore((s) => s.setRescueSeries)
   const reverse = driftMode === 'backward'
+  // 積分基準時刻：逆推從「現在」往回；順推從「回報時間」往後。
+  const baseEpoch = reverse ? Date.now() : incidentTime
 
   const fieldRef = useRef<L.LayerGroup | null>(null) // 風/流箭頭
   const driftRef = useRef<L.LayerGroup | null>(null) // 落海點 + 漂流
@@ -50,7 +58,7 @@ export function RescueLayer({ map }: { map: L.Map }) {
     driftRef.current = drift
 
     const refreshField = async () => {
-      const pts = sampleGrid(map.getBounds(), 5, 4)
+      const pts = sampleGrid(map.getBounds(), 9, 7)
       const envs = await fetchEnvGrid(pts)
       if (!fieldRef.current) return // 期間已卸載
       field.clearLayers()
@@ -101,24 +109,33 @@ export function RescueLayer({ map }: { map: L.Map }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
 
-  // ── 標記點一變（點選或手動輸入）就抓該點海象；必要時把地圖移過去 ──
+  // ── 標記點/回報時間一變：抓該點「即時海象」(面板) + 「逐時序列」(時變積分) ──
   useEffect(() => {
     if (mode !== 'rescue' || !manOverboard) return
     let cancelled = false
     setRescueStatus('loading')
-    setStatus('已標記位置，讀取海象中…')
-    // 若標記點在畫面外（多半是手動輸入座標），把地圖移過去。
+    setStatus('已標記位置，讀取歷史/即時海象中…')
     if (!map.getBounds().contains([manOverboard.lat, manOverboard.lng])) {
       map.setView([manOverboard.lat, manOverboard.lng], Math.max(map.getZoom(), 8))
     }
+    // 即時海象快照（給面板顯示風/流/浪）
     fetchEnvAt(manOverboard.lat, manOverboard.lng).then((env) => {
       if (!cancelled) setRescueResult(env, [])
+    })
+    // 逐時序列（給時變漂流積分）。past_days 依回報時間往前多抓一天。
+    const pastDays = Math.min(
+      14,
+      Math.max(2, Math.ceil((Date.now() - incidentTime) / 86400000) + 1),
+    )
+    setRescueSeries(null)
+    fetchHourlySeries(manOverboard.lat, manOverboard.lng, pastDays, 4).then((s) => {
+      if (!cancelled) setRescueSeries(s)
     })
     return () => {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, manOverboard])
+  }, [mode, manOverboard, incidentTime])
 
   // ── 漂流計算：落海點 / 海象 / 物體類型(leeway) 任一改變就重算重畫 ──
   useEffect(() => {
@@ -131,28 +148,45 @@ export function RescueLayer({ map }: { map: L.Map }) {
       return
     }
     drawManOverboard(drift, manOverboard.lat, manOverboard.lng, reverse)
-    if (!rescueEnv) return
-    const points = predictDrift({
-      lat: manOverboard.lat,
-      lng: manOverboard.lng,
-      wind: { speed: rescueEnv.windSpeed, dirDeg: rescueEnv.windDir },
-      current: { speed: rescueEnv.currentSpeed, dirDeg: rescueEnv.currentDir },
-      leewayFactor: driftLeeway,
+    if (!rescueSeries) return
+    // 用逐時真實海象「時變積分」（比單一快照外推準）。
+    const points = integrateDriftSeries(
+      manOverboard.lat,
+      manOverboard.lng,
+      rescueSeries,
+      baseEpoch,
+      [1, 6, 12, 24, 48, 72],
+      driftLeeway,
       reverse,
-      // 落海可能是數小時前甚至數天前，預判/回推到 72 小時（3 天）。
-      hoursList: [1, 6, 12, 24, 48, 72],
-    })
+    )
     drawDrift(drift, manOverboard.lat, manOverboard.lng, points, reverse)
     setDriftPoints(points)
+
+    // 順推且回報時間在過去 → 標出「現在」的預測位置（最重要）。
+    const elapsedH = (Date.now() - incidentTime) / 3600000
+    if (!reverse && elapsedH >= 1) {
+      const [nowP] = integrateDriftSeries(
+        manOverboard.lat,
+        manOverboard.lng,
+        rescueSeries,
+        baseEpoch,
+        [Math.min(72, Math.round(elapsedH))],
+        driftLeeway,
+        false,
+      )
+      if (nowP) drawNowMarker(drift, nowP.lat, nowP.lng, elapsedH, nowP.radiusMeters)
+    }
+
     setRescueStatus('done')
     const last = points[points.length - 1]
     const when = reverse ? `${last.hours}h 前` : `${last.hours}h 後`
     const verb = reverse ? '回推來源' : '漂流預判'
+    const src = rescueSeries.live ? '逐時歷史/預報海象' : '離線預設'
     setStatus(
-      `${verb}：${when}約在 ${bearingToText(last.bearingDeg)}方 ${(last.driftMeters / 1852).toFixed(1)} 浬，範圍半徑 ${(last.radiusMeters / 1852).toFixed(1)} 浬`,
+      `${verb}(${src})：${when}約在 ${bearingToText(last.bearingDeg)}方 ${(last.driftMeters / 1852).toFixed(1)} 浬，半徑 ${(last.radiusMeters / 1852).toFixed(1)} 浬`,
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, manOverboard, rescueEnv, driftLeeway, reverse])
+  }, [mode, manOverboard, rescueSeries, driftLeeway, reverse, baseEpoch, incidentTime])
 
   // ── 時間軸 scrubber：拉桿到任意小時，畫出該時刻的漂流位置 ──
   useEffect(() => {
@@ -160,16 +194,17 @@ export function RescueLayer({ map }: { map: L.Map }) {
     if (!scrubRef.current) scrubRef.current = L.layerGroup().addTo(map)
     const g = scrubRef.current
     g.clearLayers()
-    if (scrubHours > 0 && manOverboard && rescueEnv) {
-      const [p] = predictDrift({
-        lat: manOverboard.lat,
-        lng: manOverboard.lng,
-        wind: { speed: rescueEnv.windSpeed, dirDeg: rescueEnv.windDir },
-        current: { speed: rescueEnv.currentSpeed, dirDeg: rescueEnv.currentDir },
-        leewayFactor: driftLeeway,
+    if (scrubHours > 0 && manOverboard && rescueSeries) {
+      const [p] = integrateDriftSeries(
+        manOverboard.lat,
+        manOverboard.lng,
+        rescueSeries,
+        baseEpoch,
+        [scrubHours],
+        driftLeeway,
         reverse,
-        hoursList: [scrubHours],
-      })
+      )
+      if (!p) return
       L.circle([p.lat, p.lng], {
         radius: p.radiusMeters,
         color: '#fbbf24',
@@ -190,7 +225,7 @@ export function RescueLayer({ map }: { map: L.Map }) {
     return () => {
       g.clearLayers()
     }
-  }, [mode, scrubHours, manOverboard, rescueEnv, driftLeeway, reverse, map])
+  }, [mode, scrubHours, manOverboard, rescueSeries, driftLeeway, reverse, baseEpoch, map])
 
   // ── 蒙地卡羅機率密度圖 (SAROPS 式) ──────────────────────
   useEffect(() => {
@@ -198,23 +233,21 @@ export function RescueLayer({ map }: { map: L.Map }) {
     if (!probRef.current) probRef.current = L.layerGroup().addTo(map)
     const g = probRef.current
     g.clearLayers()
-    if (!showProbability || !manOverboard || !rescueEnv) {
+    if (!showProbability || !manOverboard || !rescueSeries) {
       setMcSummary(null)
       return
     }
 
     const hours = scrubHours > 0 ? scrubHours : 6
-    const mc = simulateMonteCarlo({
+    const mc = monteCarloSeries({
       lat: manOverboard.lat,
       lng: manOverboard.lng,
-      windSpeed: rescueEnv.windSpeed,
-      windDir: rescueEnv.windDir,
-      currentSpeed: rescueEnv.currentSpeed,
-      currentDir: rescueEnv.currentDir,
-      leeway: driftLeeway,
+      series: rescueSeries,
+      baseEpoch,
       hours,
+      leeway: driftLeeway,
       reverse,
-      n: 1200,
+      n: 800,
     })
     // 機率密度格：越密→越紅
     for (const cell of mc.cells) {
@@ -239,16 +272,16 @@ export function RescueLayer({ map }: { map: L.Map }) {
         zIndexOffset: 1200,
       })
         .bindPopup(
-          `<b style="color:#f43f5e">最高機率位置</b><br/>${hours}h ${reverse ? '前' : '後'}｜95% 範圍半徑 ${(mc.radius95 / 1852).toFixed(1)} 浬<br/>1200 粒子蒙地卡羅`,
+          `<b style="color:#f43f5e">最高機率位置</b><br/>${hours}h ${reverse ? '前' : '後'}｜95% 範圍半徑 ${(mc.radius95 / 1852).toFixed(1)} 浬<br/>800 粒子蒙地卡羅（時變）`,
         )
         .addTo(g)
     }
     setMcSummary({ peak: mc.peak, centroid: mc.centroid, radius95: mc.radius95 })
     setStatus(
-      `蒙地卡羅機率圖：${hours}h${reverse ? '前' : '後'}，1200 粒子，95% 範圍半徑 ${(mc.radius95 / 1852).toFixed(1)} 浬`,
+      `蒙地卡羅機率圖：${hours}h${reverse ? "前" : "後"}，800 粒子(時變)，95% 範圍半徑 ${(mc.radius95 / 1852).toFixed(1)} 浬`,
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, showProbability, manOverboard, rescueEnv, driftLeeway, reverse, scrubHours])
+  }, [mode, showProbability, manOverboard, rescueSeries, driftLeeway, reverse, scrubHours, baseEpoch])
 
   // ── 平行梳掃搜索航線 ──────────────────────────────────
   useEffect(() => {
@@ -369,10 +402,10 @@ function drawArrow(
 /** 一個網格點畫「洋流（綠）＋風（青虛線）」兩支箭頭。 */
 function drawEnvArrows(group: L.LayerGroup, e: MarineEnv) {
   // 洋流：流向 = toward，長度隨流速
-  drawArrow(group, e.lat, e.lng, e.currentDir, 6000 + e.currentSpeed * 12000, '#34d399', false)
+  drawArrow(group, e.lat, e.lng, e.currentDir, 3500 + e.currentSpeed * 8000, '#34d399', false)
   // 風：來向 + 180 = 去向，長度隨風速
   const windToward = (e.windDir + 180) % 360
-  drawArrow(group, e.lat, e.lng, windToward, 4000 + e.windSpeed * 900, '#22d3ee', true)
+  drawArrow(group, e.lat, e.lng, windToward, 2500 + e.windSpeed * 600, '#22d3ee', true)
 }
 
 function drawManOverboard(group: L.LayerGroup, lat: number, lng: number, reverse: boolean) {
@@ -389,6 +422,36 @@ function drawManOverboard(group: L.LayerGroup, lat: number, lng: number, reverse
       reverse
         ? '<b style="color:#f43f5e">發現/目擊位置 (回推來源)</b>'
         : '<b style="color:#f43f5e">落海點 (最後已知位置)</b>',
+    )
+    .addTo(group)
+}
+
+/** 順推＋回報時間在過去時，標出「現在」的預測位置（搜救最該去的點）。 */
+function drawNowMarker(
+  group: L.LayerGroup,
+  lat: number,
+  lng: number,
+  elapsedH: number,
+  radiusM: number,
+) {
+  L.circle([lat, lng], {
+    radius: radiusM,
+    color: '#34d399',
+    weight: 2,
+    fillColor: '#34d399',
+    fillOpacity: 0.15,
+  }).addTo(group)
+  L.marker([lat, lng], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div class="now-marker">⌖</div>`,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+    }),
+    zIndexOffset: 1300,
+  })
+    .bindPopup(
+      `<b style="color:#34d399">目標現在位置（預測）</b><br/>回報後約 ${elapsedH.toFixed(1)} 小時<br/>建議優先搜索此處`,
     )
     .addTo(group)
 }
