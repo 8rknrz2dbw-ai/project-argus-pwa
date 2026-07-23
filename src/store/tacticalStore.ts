@@ -72,6 +72,14 @@ interface TacticalState {
   /** 熱力圖顯示哪個欄位：海溫或浪高。 */
   seaStateField: 'sst' | 'wave'
 
+  // ── 環境時間動畫 (envanim) ───────────────────────────
+  /** 動畫目前顯示的小時 epoch（0=未載入）。 */
+  animEpoch: number
+  /** 動畫是否播放中。 */
+  animPlaying: boolean
+  /** 動畫可用的時間點(epoch) 陣列。 */
+  animTimes: number[]
+
   // ── 我的位置 (GPS，跨模式保留) ──────────────────────
   ownPosition: { lat: number; lng: number; accuracy: number } | null
 
@@ -94,6 +102,9 @@ interface TacticalState {
   setVessels: (v: Vessel[]) => void
   setOwnPosition: (p: TacticalState['ownPosition']) => void
   setSeaStateField: (f: 'sst' | 'wave') => void
+  setAnimEpoch: (e: number) => void
+  setAnimPlaying: (v: boolean) => void
+  setAnimTimes: (t: number[]) => void
   setScrubHours: (h: number) => void
   setDriftTarget: (id: string, leeway: number) => void
   setDriftPoints: (points: DriftPoint[]) => void
@@ -135,6 +146,9 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   trackSpacingNm: 1,
   vessels: [],
   seaStateField: 'sst',
+  animEpoch: 0,
+  animPlaying: false,
+  animTimes: [],
   ownPosition: null,
   statusMessage: '軌道預警模式待命中',
 
@@ -163,6 +177,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
       showSearchPattern: false,
       trackSpacingNm: 1,
       vessels: [],
+      animPlaying: false,
+  animTimes: [],
       statusMessage: MODE_HINT[mode],
     })),
 
@@ -180,6 +196,9 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setVessels: (v) => set({ vessels: v }),
   setOwnPosition: (p) => set({ ownPosition: p }),
   setSeaStateField: (f) => set({ seaStateField: f }),
+  setAnimEpoch: (e) => set({ animEpoch: e }),
+  setAnimPlaying: (v) => set({ animPlaying: v }),
+  setAnimTimes: (t) => set({ animTimes: t }),
   setScrubHours: (h) => set({ scrubHours: h }),
   setDriftTarget: (id, leeway) => set({ driftTargetId: id, driftLeeway: leeway }),
   setDriftPoints: (points) => set({ driftPoints: points }),
@@ -199,4 +218,6 @@ const MODE_HINT: Record<TacticalMode, string> = {
   ais: 'AIS 船舶識別模式：即時船位載入中',
   rescue: '搜救推演模式：點地圖標記落海點，計算漂流',
   seastate: '海況熱力圖模式：載入海溫/浪高分佈',
+  envanim: '環境時間動畫：播放風場/洋流隨時間變化',
+  typhoon: '颱風路徑：顯示颱風位置/暴風圈/預報路徑',
 }

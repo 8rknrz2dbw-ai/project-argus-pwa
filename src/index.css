@@ -175,6 +175,33 @@ body,
   animation: pulse-alert 1s ease-in-out infinite;
 }
 
+/* 颱風眼旋轉符號 */
+.ty-eye {
+  font-size: 26px;
+  line-height: 34px;
+  text-align: center;
+  text-shadow: 0 0 8px #f43f5e, 0 0 3px #000;
+  animation: ty-spin 4s linear infinite;
+}
+@keyframes ty-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* 颱風預報時間標籤 */
+.ty-time {
+  font: 700 10px ui-monospace, monospace;
+  color: #fecdd3;
+  background: rgba(159, 18, 57, 0.8);
+  border: 1px solid #f43f5e;
+  border-radius: 8px;
+  text-align: center;
+  line-height: 16px;
+}
+
 /* Leaflet 控制項配色微調 */
 .leaflet-control-zoom a,
 .leaflet-control-scale-line {

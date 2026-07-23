@@ -7,6 +7,8 @@ const MODE_LABEL: Record<string, string> = {
   ais: 'AIS',
   rescue: 'RESCUE',
   seastate: 'SEA',
+  envanim: 'ANIM',
+  typhoon: 'TYPHOON',
 }
 
 /** 頂部狀態列：模式指示 + 即時訊息（給海上人員的單行回饋）。 */
@@ -24,7 +26,7 @@ export function StatusBar() {
         <span className="font-mono text-xs font-bold tracking-widest text-tactical-green">
           阿爾戈斯 · {MODE_LABEL[mode]}
         </span>
-        <span className="font-mono text-[9px] text-slate-500">v1.14</span>
+        <span className="font-mono text-[9px] text-slate-500">v1.15</span>
       </div>
       <span className="truncate font-mono text-[11px] text-slate-300">{statusMessage}</span>
     </div>

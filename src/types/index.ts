@@ -6,7 +6,15 @@
  *   orbit   軌道預警 · sar 雷達盲搜 · optical 岸際光學
  *   ais     船舶識別 · rescue 搜救推演（風/流/漂流）
  */
-export type TacticalMode = 'orbit' | 'sar' | 'optical' | 'ais' | 'rescue' | 'seastate'
+export type TacticalMode =
+  | 'orbit'
+  | 'sar'
+  | 'optical'
+  | 'ais'
+  | 'rescue'
+  | 'seastate'
+  | 'envanim'
+  | 'typhoon'
 
 /** Web Worker 回傳的單顆衛星即時狀態。 */
 export interface SatelliteState {

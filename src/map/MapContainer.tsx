@@ -6,6 +6,8 @@ import { BBoxSelector } from './BBoxSelector'
 import { AisLayer } from './AisLayer'
 import { RescueLayer } from './RescueLayer'
 import { SeaStateLayer } from './SeaStateLayer'
+import { EnvAnimLayer } from './EnvAnimLayer'
+import { TyphoonLayer } from './TyphoonLayer'
 import { LocateControl } from './LocateControl'
 import { OfflineControl } from './OfflineControl'
 
@@ -59,6 +61,8 @@ export function MapContainer() {
       {map && <AisLayer map={map} />}
       {map && <RescueLayer map={map} />}
       {map && <SeaStateLayer map={map} />}
+      {map && <EnvAnimLayer map={map} />}
+      {map && <TyphoonLayer map={map} />}
       {map && <LocateControl map={map} />}
       {map && <OfflineControl map={map} />}
     </div>

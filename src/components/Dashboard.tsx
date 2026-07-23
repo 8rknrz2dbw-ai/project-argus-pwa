@@ -6,6 +6,8 @@ import { SarControls } from './SarControls'
 import { AisControls } from './AisControls'
 import { RescueControls } from './RescueControls'
 import { SeaStateControls } from './SeaStateControls'
+import { EnvAnimControls } from './EnvAnimControls'
+import { TyphoonControls } from './TyphoonControls'
 
 /**
  * Dashboard —— 底部（手機）/ 左側（平板以上）的控制面板。
@@ -19,7 +21,13 @@ export function Dashboard() {
   const [collapsed, setCollapsed] = useState(false)
 
   const hasPanel =
-    mode === 'optical' || mode === 'sar' || mode === 'ais' || mode === 'rescue' || mode === 'seastate'
+    mode === 'optical' ||
+    mode === 'sar' ||
+    mode === 'ais' ||
+    mode === 'rescue' ||
+    mode === 'seastate' ||
+    mode === 'envanim' ||
+    mode === 'typhoon'
   // 收合時、搜救有結果 → 顯示浮動迷你時間軸（拉桿時不擋地圖）
   const showMiniScrub = collapsed && mode === 'rescue' && driftPoints.length > 0
 
@@ -64,6 +72,8 @@ export function Dashboard() {
             {mode === 'ais' && <AisControls />}
             {mode === 'rescue' && <RescueControls />}
             {mode === 'seastate' && <SeaStateControls />}
+            {mode === 'envanim' && <EnvAnimControls />}
+            {mode === 'typhoon' && <TyphoonControls />}
           </div>
         )}
 
