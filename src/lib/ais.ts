@@ -107,6 +107,11 @@ function subscribeReal(onUpdate: Listener, key: string, onStatus?: StatusListene
     ws.onmessage = (ev) => {
       try {
         const msg = JSON.parse(ev.data as string)
+        // aisstream 若金鑰無效/超額/訂閱格式錯，會回一段 error 文字——攤開給使用者看。
+        if (msg?.error || msg?.Error || msg?.message) {
+          status(`AIS：aisstream 回報「${msg.error || msg.Error || msg.message}」（多為金鑰無效或超額）`)
+          return
+        }
         const type = msg?.MessageType
         const meta = msg?.MetaData
         if (!meta) return
@@ -154,11 +159,13 @@ function subscribeReal(onUpdate: Listener, key: string, onStatus?: StatusListene
       status('AIS：連線發生錯誤，將自動重連…')
     }
 
-    ws.onclose = () => {
+    ws.onclose = (ev) => {
       if (closedByUs) return
       attempt++
       const delay = Math.min(30000, 2000 * attempt)
-      status(`AIS：連線中斷，${Math.round(delay / 1000)} 秒後重連…`)
+      // aisstream 常把「金鑰無效」等原因放在 close reason，攤開顯示以利排查。
+      const why = ev?.reason ? `（原因：${ev.reason}）` : ev?.code ? `（code ${ev.code}）` : ''
+      status(`AIS：連線中斷${why}，${Math.round(delay / 1000)} 秒後重連…`)
       reconnectTimer = setTimeout(connect, delay)
     }
   }

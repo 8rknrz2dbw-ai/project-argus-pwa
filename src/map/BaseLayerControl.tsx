@@ -3,7 +3,15 @@ import L from 'leaflet'
 import { useTacticalStore } from '../store/tacticalStore'
 import { buildBaseLayer, BASE_LABELS, type BaseLayerId } from '../lib/baseLayers'
 
-const ORDER: BaseLayerId[] = ['dark', 'nlsc', 'nlscPhoto']
+const ORDER: BaseLayerId[] = ['dark', 'nlsc', 'nlscPhoto', 'esriPhoto']
+
+/** 各底圖的涵蓋提示（切換時顯示，讓使用者知道遠洋有沒有圖）。 */
+const BASE_NOTE: Record<BaseLayerId, string> = {
+  dark: '',
+  nlsc: '（台灣周邊；遠洋仍為暗色）',
+  nlscPhoto: '（台灣周邊；遠洋仍為暗色）',
+  esriPhoto: '（全球含外海，其它資料都疊在這張彩圖上）',
+}
 
 /**
  * 底圖管理 + 切換鈕（🗺️）。中文底圖用內政部國土測繪中心（NLSC），台灣周邊
@@ -57,7 +65,7 @@ export function BaseLayerControl({ map }: { map: L.Map }) {
   const cycle = () => {
     const next = ORDER[(ORDER.indexOf(baseLayer) + 1) % ORDER.length]
     setBaseLayer(next)
-    setStatus(`底圖：${BASE_LABELS[next]}${next !== 'dark' ? '（台灣周邊；遠洋仍為暗色）' : ''}`)
+    setStatus(`底圖：${BASE_LABELS[next]}${BASE_NOTE[next]}`)
   }
 
   if (!toolsExpanded && baseLayer === 'dark') return null
