@@ -35,7 +35,11 @@ export interface TyphoonBrief {
   closestKm: number
 }
 
-export function typhoonBrief(ty: Typhoon, ref = TW): TyphoonBrief {
+/**
+ * ref = 參考點（有 GPS 就用你的實際位置，否則台灣中心）；
+ * refLabel = 顯示用（『您所在位置』或『台灣』）。
+ */
+export function typhoonBrief(ty: Typhoon, ref = TW, refLabel = '台灣'): TyphoonBrief {
   const cur = currentPoint(ty)
   const future = ty.track.filter((p) => p.hours > 0)
   const distNow = km(ref.lat, ref.lng, cur.lat, cur.lng)
@@ -74,7 +78,7 @@ export function typhoonBrief(ty: Typhoon, ref = TW): TyphoonBrief {
   }
 
   const headline =
-    `颱風「${ty.name}」目前位於台灣${brgNow}方海面約 ${Math.round(distNow)} 公里處，` +
+    `颱風「${ty.name}」目前位於${refLabel}${brgNow}方海面約 ${Math.round(distNow)} 公里處，` +
     `向${moveTxt}方移動，近中心風約 ${windMs} m/s（${cur.windKt} kt）；` +
     `預估最近接近至約 ${Math.round(closest)} 公里。侵襲機率估計約 ${prob}%。`
 

@@ -29,6 +29,9 @@ export function TyphoonLayer({ map }: { map: L.Map }) {
       setActiveTyphoon(ty)
       draw(group, ty)
       const cur = currentPoint(ty)
+      // 有 GPS 定位 → 畫「您的位置 ↔ 颱風中心」相對線 + 距離，看相對關係。
+      const own = useTacticalStore.getState().ownPosition
+      if (own) drawRelative(group, own.lat, own.lng, cur.lat, cur.lng)
       map.setView([cur.lat + 1.5, cur.lng - 1.5], 6)
       setStatus(
         source === 'demo'
@@ -69,6 +72,31 @@ export function TyphoonLayer({ map }: { map: L.Map }) {
 
 const DEG = Math.PI / 180
 const R = 6371000
+
+/** 畫「您的位置 ↔ 颱風中心」的相對線與距離標籤。 */
+function drawRelative(group: L.LayerGroup, ownLat: number, ownLng: number, tyLat: number, tyLng: number) {
+  const a =
+    Math.sin(((tyLat - ownLat) * DEG) / 2) ** 2 +
+    Math.cos(ownLat * DEG) * Math.cos(tyLat * DEG) * Math.sin(((tyLng - ownLng) * DEG) / 2) ** 2
+  const km = ((2 * R * Math.asin(Math.sqrt(a))) / 1000).toFixed(0)
+  L.polyline(
+    [
+      [ownLat, ownLng],
+      [tyLat, tyLng],
+    ],
+    { color: '#38bdf8', weight: 1.5, dashArray: '3 5', opacity: 0.7 },
+  ).addTo(group)
+  const mid: [number, number] = [(ownLat + tyLat) / 2, (ownLng + tyLng) / 2]
+  L.marker(mid, {
+    icon: L.divIcon({
+      className: '',
+      html: `<div class="rel-label">距您 ${km} km</div>`,
+      iconSize: [80, 16],
+      iconAnchor: [40, 8],
+    }),
+  }).addTo(group)
+}
+
 function dest(lat: number, lng: number, bearingDeg: number, distM: number) {
   const b = bearingDeg * DEG
   return {
