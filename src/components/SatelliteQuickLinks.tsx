@@ -35,9 +35,16 @@ export function SatelliteQuickLinks({
           </span>
         </a>
       ))}
+      <div className="rounded-md border border-tactical-green/25 bg-tactical-green/5 px-2 py-1.5 text-[10px] leading-relaxed text-slate-400">
+        <b className="text-tactical-green">其實 App 內就有對應功能（免出去）：</b>
+        <br />• Worldview 每日影像 → 光學模式選「<b className="text-slate-300">每日</b>」來源（已升級 VIIRS）
+        <br />• Copernicus 雷達 → <b className="text-slate-300">雷達盲搜</b>模式（貼 Sentinel 金鑰啟用）
+        <br />• MarineTraffic 船位 → <b className="text-slate-300">AIS 識別</b>模式（貼 AISStream 免費金鑰，且無 cookie 牆）
+        <br />上方連結是用來翻「<b className="text-slate-300">全解析歷史檔案</b>」的加值，不是唯一途徑。
+      </div>
       <p className="text-[10px] leading-relaxed text-slate-500">
         誠實提醒：小船（&lt;10m）免費衛星多半解析不到，且非即時（重訪數天）。
-        真正定位靠<b className="text-slate-400">漂流預判＋就近船隻目視</b>；衛星用來比對大範圍與雷達找金屬船體。
+        真正定位靠<b className="text-slate-400">漂流預判＋就近船隻目視</b>。
       </p>
     </div>
   )
