@@ -33,12 +33,34 @@ export function Dashboard() {
   // 收合時、搜救有結果 → 顯示浮動迷你時間軸（拉桿時不擋地圖）
   const showMiniScrub = collapsed && mode === 'rescue' && driftPoints.length > 0
 
+  const controls = (
+    <>
+      {mode === 'optical' && <OpticalControls />}
+      {mode === 'sar' && <SarControls />}
+      {mode === 'ais' && <AisControls />}
+      {mode === 'rescue' && <RescueControls />}
+      {mode === 'seastate' && <SeaStateControls />}
+      {mode === 'envanim' && <EnvAnimControls />}
+      {mode === 'typhoon' && <TyphoonControls />}
+    </>
+  )
+
   return (
-    <div className="safe-bottom pointer-events-none absolute inset-x-0 bottom-0 z-[1000] md:inset-y-0 md:left-0 md:right-auto md:w-80 md:p-4">
-      <div className="pointer-events-auto flex flex-col gap-2 md:h-full md:justify-end">
-        {/* 收合/展開條 */}
+    <div className="safe-bottom pointer-events-none absolute inset-x-0 bottom-0 z-[1000] md:inset-y-0 md:right-auto md:bottom-0 md:flex md:items-stretch md:pt-[3.4rem]">
+      {/* 桌面：最左側常駐模式欄（手機隱藏） */}
+      <div className="pointer-events-auto hidden md:flex md:flex-col md:overflow-y-auto md:border-r md:border-slate-800 md:bg-tactical-bg/85 md:p-1.5 md:backdrop-blur">
+        <ModeButtons variant="rail" />
+      </div>
+
+      {/* 共用面板：手機＝底部抽屜；桌面＝左側控制欄（只有需要時佔寬） */}
+      <div
+        className={`pointer-events-auto flex flex-col gap-2 md:h-full md:overflow-y-auto md:p-3 ${
+          hasPanel ? 'md:w-80' : 'md:w-0 md:overflow-hidden md:p-0'
+        }`}
+      >
+        {/* 收合/展開條：手機專用（桌面永遠展開） */}
         {hasPanel && (
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between md:hidden">
             <button
               onClick={() => setCollapsed(!collapsed)}
               className="rounded-lg border border-slate-700 bg-tactical-panel/90 px-3 py-1.5 text-xs font-bold text-slate-200 active:scale-95"
@@ -48,9 +70,9 @@ export function Dashboard() {
           </div>
         )}
 
-        {/* 收合時的浮動迷你時間軸 */}
+        {/* 收合時的浮動迷你時間軸：手機專用 */}
         {showMiniScrub && (
-          <div className="flex items-center gap-2 rounded-lg border border-amber-500/40 bg-tactical-panel/95 px-3 py-2">
+          <div className="flex items-center gap-2 rounded-lg border border-amber-500/40 bg-tactical-panel/95 px-3 py-2 md:hidden">
             <span className="shrink-0 font-mono text-[11px] text-amber-400">
               ⏱{' '}
               {scrubHours === 0
@@ -69,21 +91,17 @@ export function Dashboard() {
           </div>
         )}
 
-        {/* 模式專屬控制項：內容過高時本區塊自行捲動；收合時隱藏 */}
-        {!collapsed && (
-          <div className="flex max-h-[46vh] flex-col gap-2 overflow-y-auto overscroll-contain md:max-h-[60vh]">
-            {mode === 'optical' && <OpticalControls />}
-            {mode === 'sar' && <SarControls />}
-            {mode === 'ais' && <AisControls />}
-            {mode === 'rescue' && <RescueControls />}
-            {mode === 'seastate' && <SeaStateControls />}
-            {mode === 'envanim' && <EnvAnimControls />}
-            {mode === 'typhoon' && <TyphoonControls />}
-          </div>
-        )}
+        {/* 模式專屬控制項：手機收合時隱藏；桌面永遠顯示並自行捲動 */}
+        <div
+          className={`${collapsed ? 'hidden' : 'flex'} max-h-[46vh] flex-col gap-2 overflow-y-auto overscroll-contain md:flex md:max-h-none md:flex-1 md:overflow-visible`}
+        >
+          {controls}
+        </div>
 
-        {/* 戰術模式按鈕：永遠可見 */}
-        <ModeButtons />
+        {/* 戰術模式按鈕：手機底部橫列（桌面用左側 rail） */}
+        <div className="md:hidden">
+          <ModeButtons variant="strip" />
+        </div>
       </div>
     </div>
   )

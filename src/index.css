@@ -115,6 +115,12 @@ body,
   top: calc(env(safe-area-inset-top) + 3.4rem);
   left: calc(0.75rem + env(safe-area-inset-left));
 }
+/* 桌面：避開左側「模式欄 + 控制面板」（約 24rem 寬） */
+@media (min-width: 768px) {
+  .map-info-pos {
+    left: 24.75rem;
+  }
+}
 
 /* 深色底圖已改用 CARTO dark_matter，這裡只做輕微微調＋雷達幕氛圍 */
 .base-tiles-tactical {
