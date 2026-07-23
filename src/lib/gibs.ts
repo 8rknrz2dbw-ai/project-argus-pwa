@@ -22,6 +22,7 @@ export function buildEsriImagery(): L.TileLayer {
       maxNativeZoom: 19,
       attribution: 'Imagery © Esri, Maxar, Earthstar Geographics',
       className: 'gibs-imagery',
+      crossOrigin: 'anonymous', // 允許畫面亮點掃描讀取像素
     },
   )
 }
@@ -44,6 +45,7 @@ export function buildS2Cloudless(): L.TileLayer {
     maxZoom: 19,
     attribution: 'Sentinel-2 cloudless 2023 © EOX IT Services（含 Copernicus 資料）',
     className: 'gibs-imagery',
+    crossOrigin: 'anonymous',
   })
 }
 
@@ -61,5 +63,6 @@ export function buildGibsTrueColor(date: string): L.TileLayer {
     ],
     attribution: 'Imagery © NASA EOSDIS GIBS · MODIS',
     className: 'gibs-imagery',
+    crossOrigin: 'anonymous',
   })
 }

@@ -23,6 +23,12 @@ interface TacticalState {
   observationDate: string
   /** 免金鑰光學影像來源：esri=高解析空拍(岸際最銳利)、eox=Sentinel-2無雲(10m平滑)、nasa=每日MODIS(有雲/較糊)。 */
   opticalSource: 'nasa' | 'esri' | 'eox'
+  /** 亮點掃描：每次按鈕 +1 觸發一次掃描。 */
+  scanTick: number
+  /** 掃描靈敏度（門檻 kStd，越小越敏感）。 */
+  scanSensitivity: number
+  /** 掃描到的疑似亮點（畫面→經緯度）。 */
+  brightSpots: { lat: number; lng: number; score: number }[]
 
   // ── AI 分析結果 ─────────────────────────────────────
   detections: DetectionCollection | null
@@ -104,6 +110,9 @@ interface TacticalState {
   setMaxCloudCover: (v: number) => void
   setObservationDate: (d: string) => void
   setOpticalSource: (s: 'nasa' | 'esri' | 'eox') => void
+  bumpScan: () => void
+  setScanSensitivity: (v: number) => void
+  setBrightSpots: (s: { lat: number; lng: number; score: number }[]) => void
   setDetections: (d: DetectionCollection | null) => void
   setAiStatus: (s: TacticalState['aiStatus'], error?: string | null) => void
   setSelecting: (v: boolean) => void
@@ -142,6 +151,9 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   maxCloudCover: 20,
   observationDate: today,
   opticalSource: 'esri',
+  scanTick: 0,
+  scanSensitivity: 3,
+  brightSpots: [],
   detections: null,
   aiStatus: 'idle',
   aiError: null,
@@ -198,6 +210,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
       showSearchPattern: false,
       trackSpacingNm: 1,
       vessels: [],
+      brightSpots: [],
       cwaTide: null,
       cwaSeaAreas: null,
       animPlaying: false,
@@ -208,6 +221,9 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setMaxCloudCover: (v) => set({ maxCloudCover: v }),
   setObservationDate: (d) => set({ observationDate: d }),
   setOpticalSource: (s: 'nasa' | 'esri' | 'eox') => set({ opticalSource: s }),
+  bumpScan: () => set((st) => ({ scanTick: st.scanTick + 1 })),
+  setScanSensitivity: (v) => set({ scanSensitivity: v }),
+  setBrightSpots: (s) => set({ brightSpots: s }),
   setDetections: (d) => set({ detections: d }),
   setAiStatus: (s, error = null) => set({ aiStatus: s, aiError: error }),
   setSelecting: (v) => set({ selecting: v }),

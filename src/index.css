@@ -180,6 +180,21 @@ body,
   animation: pulse-alert 1s ease-in-out infinite;
 }
 
+/* 亮點掃描記號（青色編號脈動圈） */
+.bright-spot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #22d3ee;
+  background: rgba(34, 211, 238, 0.18);
+  color: #a5f3fc;
+  font: 700 11px ui-monospace, monospace;
+  text-align: center;
+  line-height: 18px;
+  box-shadow: 0 0 8px #22d3ee;
+  animation: pulse-alert 1.4s ease-in-out infinite;
+}
+
 /* 颱風眼旋轉符號 */
 .ty-eye {
   font-size: 26px;
