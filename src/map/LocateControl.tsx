@@ -12,6 +12,7 @@ export function LocateControl({ map }: { map: L.Map }) {
   const setOwnPosition = useTacticalStore((s) => s.setOwnPosition)
   const setStatus = useTacticalStore((s) => s.setStatus)
   const trackRecording = useTacticalStore((s) => s.trackRecording)
+  const toolsExpanded = useTacticalStore((s) => s.toolsExpanded)
   const ownTrack = useTacticalStore((s) => s.ownTrack)
   const toggleTrackRecording = useTacticalStore((s) => s.toggleTrackRecording)
   const pushTrackPoint = useTacticalStore((s) => s.pushTrackPoint)
@@ -125,12 +126,15 @@ export function LocateControl({ map }: { map: L.Map }) {
     if (!longPressed.current) locateOnce()
   }
 
+  // 收合工具列時隱藏按鈕（但定位/航跡的 effect 仍運行）；記錄中則強制顯示。
+  if (!toolsExpanded && !trackRecording) return null
+
   return (
     <button
       onPointerDown={onPressStart}
       onPointerUp={onPressEnd}
       onPointerLeave={() => pressTimer.current && clearTimeout(pressTimer.current)}
-      className={`safe-float-top2 pointer-events-auto absolute z-[1100] flex h-11 w-11 items-center justify-center rounded-full border text-xl active:scale-95 ${
+      className={`safe-float-top3 pointer-events-auto absolute z-[1100] flex h-11 w-11 items-center justify-center rounded-full border text-xl active:scale-95 ${
         trackRecording ? 'border-red-500 bg-red-500/20' : 'border-slate-600 bg-tactical-panel/90'
       }`}
       aria-label="我的位置（長按記錄航跡）"

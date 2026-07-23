@@ -8,6 +8,7 @@ import { tilesForBounds, downloadTiles } from '../lib/offlineMap'
  */
 export function OfflineControl({ map }: { map: L.Map }) {
   const setStatus = useTacticalStore((s) => s.setStatus)
+  const toolsExpanded = useTacticalStore((s) => s.toolsExpanded)
   const [busy, setBusy] = useState(false)
   const [pct, setPct] = useState(0)
 
@@ -33,10 +34,12 @@ export function OfflineControl({ map }: { map: L.Map }) {
     )
   }
 
+  if (!toolsExpanded && !busy) return null
+
   return (
     <button
       onClick={download}
-      className="safe-float-top3 pointer-events-auto absolute z-[1100] flex h-11 w-11 items-center justify-center rounded-full border border-slate-600 bg-tactical-panel/90 text-lg active:scale-95"
+      className="safe-float-top4 pointer-events-auto absolute z-[1100] flex h-11 w-11 items-center justify-center rounded-full border border-slate-600 bg-tactical-panel/90 text-lg active:scale-95"
       aria-label="下載離線地圖"
       title="下載此區離線地圖"
     >
