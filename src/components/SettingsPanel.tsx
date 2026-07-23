@@ -70,10 +70,17 @@ export function SettingsPanel() {
             />
             <Field
               label="🤖 邊緣 AI Worker 網址"
-              hint="部署 cloudflare/worker.js 後取得"
+              hint="部署 cloudflare/worker.js 後取得（雷達盲搜 + CWA 代理共用）"
               value={cfg.edgeAiUrl}
               onChange={(v) => setCfg({ ...cfg, edgeAiUrl: v })}
               placeholder="https://argus-edge-ai.xxx.workers.dev"
+            />
+            <Field
+              label="🌀 中央氣象署 CWA 授權碼"
+              hint="opendata.cwa.gov.tw 免費會員取得（rdec-key-...）。需搭配上方 Worker（CWA 無 CORS）；用於颱風即時路徑"
+              value={cfg.cwaKey}
+              onChange={(v) => setCfg({ ...cfg, cwaKey: v })}
+              placeholder="CWA-XXXXXXXX-... 或 rdec-key-..."
             />
 
             <div className="mt-4 flex gap-2">

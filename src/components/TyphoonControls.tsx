@@ -1,4 +1,5 @@
 import { demoTyphoon, currentPoint } from '../lib/typhoon'
+import { isCwaConfigured } from '../lib/config'
 
 /**
  * 颱風路徑控制面板：顯示示範颱風的資訊與圖例。
@@ -9,6 +10,7 @@ export function TyphoonControls() {
   const ty = demoTyphoon()
   const cur = currentPoint(ty)
   const future = ty.track.filter((p) => p.hours > 0)
+  const cwa = isCwaConfigured()
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-slate-700 bg-tactical-panel/90 p-3">
@@ -51,10 +53,17 @@ export function TyphoonControls() {
         </span>
       </div>
 
-      <p className="rounded-md bg-slate-800/60 px-2 py-1.5 text-[10px] leading-relaxed text-slate-400">
-        目前為<b className="text-slate-300">示範颱風</b>資料。即時 W. Pacific 颱風無免金鑰
-        CORS 來源，未來可經 Worker 代理 GDACS/JTWC 即時路徑後，以相同格式自動更新。
-      </p>
+      {cwa ? (
+        <p className="rounded-md border border-tactical-green/30 bg-tactical-green/5 px-2 py-1.5 text-[10px] leading-relaxed text-tactical-green">
+          ✓ 已設定 CWA + Worker：進入本模式會自動抓<b>中央氣象署颱風路徑潛勢預報</b>。
+          若目前無颱風或格式不符，會顯示上方示範資料。
+        </p>
+      ) : (
+        <p className="rounded-md bg-slate-800/60 px-2 py-1.5 text-[10px] leading-relaxed text-slate-400">
+          目前為<b className="text-slate-300">示範颱風</b>。要接<b className="text-slate-300">中央氣象署即時路徑</b>：
+          ⚙️ 設定裡填「Worker 網址」+「CWA 授權碼」，並把最新 worker.js 重新部署（含 CWA 代理）。
+        </p>
+      )}
     </div>
   )
 }

@@ -39,6 +39,12 @@ export default {
       return json({ error: 'invalid json' }, 400)
     }
 
+    // ── CWA (中央氣象署) Open Data 代理路由 ──────────────────
+    // CWA API 無 CORS，且授權碼不宜放前端；由此代理注入/轉送後再回傳。
+    if (body?.cwaDataset) {
+      return proxyCwa(body, env)
+    }
+
     const { bbox, date } = body ?? {}
     if (!validBBox(bbox)) {
       return json({ error: 'invalid bbox' }, 400)
@@ -61,6 +67,35 @@ export default {
       return json({ error: String(err?.message ?? err) }, 502)
     }
   },
+}
+
+// ── CWA Open Data 代理 ──────────────────────────────────────
+// 授權碼優先用 Worker secret（env.CWA_KEY，最安全）；沒有則用前端傳來的
+// cwaKey（個人手機自用可接受）。dataset 白名單化，避免變成開放代理。
+async function proxyCwa(body, env) {
+  const dataset = String(body.cwaDataset || '')
+  if (!/^[A-Z]-[A-Z0-9-]{3,20}$/.test(dataset)) {
+    return json({ error: 'invalid cwaDataset' }, 400)
+  }
+  const key = env.CWA_KEY || body.cwaKey
+  if (!key) return json({ error: 'no CWA authorization' }, 400)
+
+  const params = new URLSearchParams({ Authorization: String(key), format: 'JSON' })
+  const extra = body.cwaParams
+  if (extra && typeof extra === 'object') {
+    for (const [k, v] of Object.entries(extra)) {
+      if (typeof v === 'string' || typeof v === 'number') params.set(k, String(v))
+    }
+  }
+  const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/${dataset}?${params}`
+  try {
+    const r = await fetch(url, { headers: { accept: 'application/json' } })
+    if (!r.ok) return json({ error: `CWA ${r.status}` }, 502)
+    const data = await r.json()
+    return json(data)
+  } catch (err) {
+    return json({ error: String(err?.message ?? err) }, 502)
+  }
 }
 
 // ── 真實流程：抓 Sentinel-1 SAR 圖 → Workers AI 推論 ──────────
