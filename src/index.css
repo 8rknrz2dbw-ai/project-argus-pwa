@@ -114,6 +114,15 @@ body,
   box-shadow: 0 0 10px #38bdf8;
 }
 
+/* 蒙地卡羅最高機率點 */
+.mc-peak {
+  font-size: 22px;
+  line-height: 26px;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 0 6px #f43f5e, 0 0 3px #000;
+}
+
 /* 時間軸 scrubber 標籤（琥珀色） */
 .scrub-label {
   font: 700 11px ui-monospace, monospace;

@@ -17,6 +17,8 @@ export function RescueControls() {
   const setDriftTarget = useTacticalStore((s) => s.setDriftTarget)
   const driftMode = useTacticalStore((s) => s.driftMode)
   const setDriftMode = useTacticalStore((s) => s.setDriftMode)
+  const showProbability = useTacticalStore((s) => s.showProbability)
+  const setShowProbability = useTacticalStore((s) => s.setShowProbability)
   const reverse = driftMode === 'backward'
   const setMob = useTacticalStore((s) => s.setManOverboard)
   const setResult = useTacticalStore((s) => s.setRescueResult)
@@ -135,6 +137,27 @@ export function RescueControls() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* 蒙地卡羅機率密度圖 (SAROPS 式) */}
+      {status === 'done' && drift.length > 0 && (
+        <button
+          onClick={() => setShowProbability(!showProbability)}
+          className={[
+            'rounded-lg border px-3 py-2 text-xs font-bold transition-all active:scale-95',
+            showProbability
+              ? 'border-tactical-alert bg-tactical-alert/20 text-tactical-alert'
+              : 'border-slate-600 bg-slate-900/60 text-slate-300',
+          ].join(' ')}
+        >
+          🎲 {showProbability ? '關閉機率圖' : '蒙地卡羅機率搜索圖 (SAROPS式)'}
+        </button>
+      )}
+      {showProbability && (
+        <p className="-mt-1 text-[10px] leading-relaxed text-slate-500">
+          在標記點周圍灑 1200 個亂數粒子，各依偏航±風壓差+風流漂流，紅=機率最高、◎=峰值。
+          比單一圈更貼近真實搜索範圍（依國研院海洋中心搜救科學方法）。
+        </p>
       )}
 
       {/* 時間軸拉桿：拉到任意時間看漂流位置 */}

@@ -3,6 +3,7 @@ import L from 'leaflet'
 import { useTacticalStore } from '../store/tacticalStore'
 import { fetchEnvAt, fetchEnvGrid, type MarineEnv } from '../lib/marineEnv'
 import { predictDrift, bearingToText } from '../lib/drift'
+import { simulateMonteCarlo } from '../lib/montecarlo'
 
 /**
  * 搜救推演圖層。只在 rescue 模式運行：
@@ -23,12 +24,14 @@ export function RescueLayer({ map }: { map: L.Map }) {
   const scrubHours = useTacticalStore((s) => s.scrubHours)
   const driftLeeway = useTacticalStore((s) => s.driftLeeway)
   const driftMode = useTacticalStore((s) => s.driftMode)
+  const showProbability = useTacticalStore((s) => s.showProbability)
   const setDriftPoints = useTacticalStore((s) => s.setDriftPoints)
   const reverse = driftMode === 'backward'
 
   const fieldRef = useRef<L.LayerGroup | null>(null) // 風/流箭頭
   const driftRef = useRef<L.LayerGroup | null>(null) // 落海點 + 漂流
   const scrubRef = useRef<L.LayerGroup | null>(null) // 時間軸 scrubber
+  const probRef = useRef<L.LayerGroup | null>(null) // 蒙地卡羅機率密度
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -79,6 +82,11 @@ export function RescueLayer({ map }: { map: L.Map }) {
         scrubRef.current.clearLayers()
         map.removeLayer(scrubRef.current)
         scrubRef.current = null
+      }
+      if (probRef.current) {
+        probRef.current.clearLayers()
+        map.removeLayer(probRef.current)
+        probRef.current = null
       }
       fieldRef.current = null
       driftRef.current = null
@@ -158,7 +166,68 @@ export function RescueLayer({ map }: { map: L.Map }) {
     }
   }, [mode, scrubHours, manOverboard, rescueEnv, driftLeeway, reverse, map])
 
+  // ── 蒙地卡羅機率密度圖 (SAROPS 式) ──────────────────────
+  useEffect(() => {
+    if (mode !== 'rescue') return
+    if (!probRef.current) probRef.current = L.layerGroup().addTo(map)
+    const g = probRef.current
+    g.clearLayers()
+    if (!showProbability || !manOverboard || !rescueEnv) return
+
+    const hours = scrubHours > 0 ? scrubHours : 6
+    const mc = simulateMonteCarlo({
+      lat: manOverboard.lat,
+      lng: manOverboard.lng,
+      windSpeed: rescueEnv.windSpeed,
+      windDir: rescueEnv.windDir,
+      currentSpeed: rescueEnv.currentSpeed,
+      currentDir: rescueEnv.currentDir,
+      leeway: driftLeeway,
+      hours,
+      reverse,
+      n: 1200,
+    })
+    // 機率密度格：越密→越紅
+    for (const cell of mc.cells) {
+      const t = cell.count / mc.maxCount
+      L.rectangle(
+        [
+          [cell.south, cell.west],
+          [cell.north, cell.east],
+        ],
+        { stroke: false, fillColor: densityColor(t), fillOpacity: 0.45 + t * 0.4 },
+      ).addTo(g)
+    }
+    // 最高機率點
+    if (mc.peak) {
+      L.marker([mc.peak.lat, mc.peak.lng], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div class="mc-peak">◎</div>`,
+          iconSize: [26, 26],
+          iconAnchor: [13, 13],
+        }),
+        zIndexOffset: 1200,
+      })
+        .bindPopup(
+          `<b style="color:#f43f5e">最高機率位置</b><br/>${hours}h ${reverse ? '前' : '後'}｜95% 範圍半徑 ${(mc.radius95 / 1852).toFixed(1)} 浬<br/>1200 粒子蒙地卡羅`,
+        )
+        .addTo(g)
+    }
+    setStatus(
+      `蒙地卡羅機率圖：${hours}h${reverse ? '前' : '後'}，1200 粒子，95% 範圍半徑 ${(mc.radius95 / 1852).toFixed(1)} 浬`,
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, showProbability, manOverboard, rescueEnv, driftLeeway, reverse, scrubHours])
+
   return null
+}
+
+/** 機率密度色階：低(藍紫透明) → 中(黃) → 高(紅)。 */
+function densityColor(t: number): string {
+  if (t < 0.33) return '#38bdf8'
+  if (t < 0.66) return '#fbbf24'
+  return '#f43f5e'
 }
 
 // ── 幾何工具 ────────────────────────────────────────────────
