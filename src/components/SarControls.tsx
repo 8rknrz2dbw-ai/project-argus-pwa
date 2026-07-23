@@ -1,5 +1,6 @@
 import { useTacticalStore } from '../store/tacticalStore'
 import { isEdgeAiConfigured } from '../lib/edgeAI'
+import { getConfig } from '../lib/config'
 
 /**
  * 雷達盲搜模式的控制項：框選按鈕 + AI 狀態。
@@ -9,6 +10,8 @@ export function SarControls() {
   const setSelecting = useTacticalStore((s) => s.setSelecting)
   const aiStatus = useTacticalStore((s) => s.aiStatus)
   const detections = useTacticalStore((s) => s.detections)
+  const edgeReady = isEdgeAiConfigured()
+  const edgeUrl = getConfig().edgeAiUrl
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-slate-700 bg-tactical-panel/80 p-3">
@@ -36,15 +39,31 @@ export function SarControls() {
         </span>
       </div>
 
-      <p className="text-[10px] leading-relaxed text-slate-500">
-        框選海域即可用「示範 AI」找出疑似船隻——不用設定就能玩。
-      </p>
-      {!isEdgeAiConfigured() && (
-        <p className="text-[10px] leading-relaxed text-amber-500/80">
-          目前為<b>示範 AI 偵測</b>（免設定）。想接<b>真實 AI</b>需先用電腦部署
-          Cloudflare Worker，再到右上 <b>⚙️ 設定 → 「邊緣 AI Worker 網址」</b>貼上網址。
-          屬進階選配，沒有也能用示範。
-        </p>
+      {edgeReady ? (
+        <div className="flex flex-col gap-1 rounded border border-tactical-green/40 bg-tactical-green/5 p-2">
+          <p className="text-[11px] font-semibold text-tactical-green">
+            ✅ 已連接邊緣 AI Worker
+          </p>
+          <p className="break-all font-mono text-[9px] text-slate-500">{edgeUrl}</p>
+          <p className="text-[10px] leading-relaxed text-slate-400">
+            框選海域會送到你的 Cloudflare Worker 辨識。
+            <b className="text-amber-400/90">
+              目前 Worker 未設 CDSE_TOKEN，回傳的是示範點
+            </b>
+            ；要真實 SAR 影像辨識，去 Copernicus 申請 token 後在 Worker 加 Secret 即可。
+          </p>
+        </div>
+      ) : (
+        <>
+          <p className="text-[10px] leading-relaxed text-slate-500">
+            框選海域即可用「示範 AI」找出疑似船隻——不用設定就能玩。
+          </p>
+          <p className="text-[10px] leading-relaxed text-amber-500/80">
+            目前為<b>示範 AI 偵測</b>（免設定）。想接<b>真實 AI</b>需先部署
+            Cloudflare Worker，再到右上 <b>⚙️ 設定 → 「邊緣 AI Worker 網址」</b>貼上網址。
+            屬進階選配，沒有也能用示範。
+          </p>
+        </>
       )}
     </div>
   )
