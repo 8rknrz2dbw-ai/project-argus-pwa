@@ -31,12 +31,19 @@ export function AisControls() {
         </div>
       )}
 
+      {vessels.length === 0 && (
+        <p className="text-[10px] leading-relaxed text-amber-500/90">
+          {isAisConfigured()
+            ? '尚未收到船位——真實 AIS 每艘船隔數十秒才回報一次，請縮小地圖到台灣周邊並稍候。'
+            : '模擬船隻在台灣周邊，若看不到請縮小地圖。'}
+        </p>
+      )}
       <p className="text-[10px] leading-relaxed text-slate-500">
-        點船隻可看詳情。橙框為限制水域，駛入者示警。
+        點船隻可看詳情。無船名/航速異常者以紅色示警。
       </p>
       {!isAisConfigured() && (
         <p className="text-[10px] leading-relaxed text-amber-500/80">
-          目前為模擬船隻。到 aisstream.io 免費申請金鑰，填入設定 ⚙️ 即接真實 AIS。
+          目前為模擬船隻。到 aisstream.io 免費申請金鑰，填入 ⚙️ 設定即接真實 AIS。
         </p>
       )}
     </div>
