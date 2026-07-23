@@ -3,7 +3,7 @@ import L from 'leaflet'
 import { useTacticalStore } from '../store/tacticalStore'
 import { SatelliteCanvasLayer } from './SatelliteCanvasLayer'
 import { buildWmsConfig, LAYERS, isSentinelConfigured } from '../lib/sentinel'
-import { buildGibsTrueColor } from '../lib/gibs'
+import { buildGibsTrueColor, buildEsriImagery } from '../lib/gibs'
 import type { DetectionCollection } from '../types'
 
 /**
@@ -22,6 +22,7 @@ export function LayerControl({ map }: { map: L.Map }) {
   const mode = useTacticalStore((s) => s.mode)
   const maxCloudCover = useTacticalStore((s) => s.maxCloudCover)
   const observationDate = useTacticalStore((s) => s.observationDate)
+  const opticalSource = useTacticalStore((s) => s.opticalSource)
   const detections = useTacticalStore((s) => s.detections)
   const setStatus = useTacticalStore((s) => s.setStatus)
 
@@ -80,13 +81,21 @@ export function LayerControl({ map }: { map: L.Map }) {
     }
 
     function mountGibs() {
+      if (opticalSource === 'esri') {
+        const esri = buildEsriImagery()
+        esri.on('load', () => setStatus('高解析衛星影像（Esri · 放大清晰、非每日）'))
+        esri.addTo(map)
+        tileRef.current = esri
+        setStatus('載入高解析衛星影像中（Esri）…')
+        return
+      }
       const gibs = buildGibsTrueColor(observationDate)
       gibs.on('load', () =>
-        setStatus('免費衛星影像（NASA MODIS · 約 250m）。設定 Sentinel 金鑰可升級 10m 高解析'),
+        setStatus('每日衛星影像（NASA MODIS · 約 250m）。放大想更清晰請切「高解析」'),
       )
       gibs.addTo(map)
       tileRef.current = gibs
-      setStatus('載入免費衛星影像中（NASA MODIS）…若空白請把日期往回調 1–2 天')
+      setStatus('載入每日衛星影像中（NASA MODIS）…若空白請把日期往回調 1–2 天')
     }
 
     function mountWms(layer: string, maxcc: number | undefined) {
@@ -136,7 +145,7 @@ export function LayerControl({ map }: { map: L.Map }) {
       removeCanvas()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, maxCloudCover, observationDate])
+  }, [mode, maxCloudCover, observationDate, opticalSource])
 
   // ── Vector 層：AI 偵測結果單獨更新（不重建影像層）──────
   useEffect(() => {

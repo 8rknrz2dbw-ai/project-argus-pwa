@@ -10,6 +10,8 @@ export function OpticalControls() {
   const setMaxCloudCover = useTacticalStore((s) => s.setMaxCloudCover)
   const observationDate = useTacticalStore((s) => s.observationDate)
   const setObservationDate = useTacticalStore((s) => s.setObservationDate)
+  const opticalSource = useTacticalStore((s) => s.opticalSource)
+  const setOpticalSource = useTacticalStore((s) => s.setOpticalSource)
   const today = new Date().toISOString().slice(0, 10)
   const hd = isSentinelConfigured()
 
@@ -19,11 +21,31 @@ export function OpticalControls() {
         {hd ? (
           <span className="text-tactical-green">🛰️ 高解析度：Sentinel-2（10m）· 雲量過濾生效</span>
         ) : (
-          <span className="text-tactical-cyan">
-            🛰️ 免費衛星影像：NASA MODIS（約 250m）· 貼 Sentinel 金鑰可升級 10m
-          </span>
+          <span className="text-tactical-cyan">🛰️ 免金鑰影像來源（貼 Sentinel 金鑰可升級 10m）</span>
         )}
       </div>
+
+      {/* 免金鑰時可切 每日(NASA) / 高解析(Esri) */}
+      {!hd && (
+        <div className="grid grid-cols-2 gap-1 rounded-lg border border-slate-700 p-1">
+          <button
+            onClick={() => setOpticalSource('nasa')}
+            className={`rounded py-1.5 text-xs font-bold active:scale-95 ${
+              opticalSource === 'nasa' ? 'bg-tactical-cyan/20 text-tactical-cyan' : 'text-slate-400'
+            }`}
+          >
+            每日影像 (NASA)
+          </button>
+          <button
+            onClick={() => setOpticalSource('esri')}
+            className={`rounded py-1.5 text-xs font-bold active:scale-95 ${
+              opticalSource === 'esri' ? 'bg-tactical-cyan/20 text-tactical-cyan' : 'text-slate-400'
+            }`}
+          >
+            高解析 (Esri)
+          </button>
+        </div>
+      )}
       <div>
         <div className="mb-1 flex items-center justify-between">
           <label className="text-xs font-semibold text-tactical-green">☁ 最大雲量</label>
