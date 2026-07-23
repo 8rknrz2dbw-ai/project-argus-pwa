@@ -264,7 +264,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
         return null
       }
     })()
-    return v === 'nlsc' || v === 'nlscPhoto' || v === 'dark' ? v : 'dark'
+    return v === 'nlsc' || v === 'nlscPhoto' || v === 'satColor' || v === 'dark' ? v : 'dark'
   })(),
   toolsExpanded: false,
   showTerritorial: false,

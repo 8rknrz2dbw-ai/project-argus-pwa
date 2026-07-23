@@ -3,14 +3,14 @@ import L from 'leaflet'
 import { useTacticalStore } from '../store/tacticalStore'
 import { buildBaseLayer, BASE_LABELS, type BaseLayerId } from '../lib/baseLayers'
 
-const ORDER: BaseLayerId[] = ['dark', 'nlsc', 'nlscPhoto', 'esriPhoto']
+const ORDER: BaseLayerId[] = ['dark', 'nlsc', 'nlscPhoto', 'satColor']
 
 /** 各底圖的涵蓋提示（切換時顯示，讓使用者知道遠洋有沒有圖）。 */
 const BASE_NOTE: Record<BaseLayerId, string> = {
   dark: '',
   nlsc: '（台灣周邊；遠洋仍為暗色）',
   nlscPhoto: '（台灣周邊；遠洋仍為暗色）',
-  esriPhoto: '（全球含外海，其它資料都疊在這張彩圖上）',
+  satColor: '（全球含外海，其它資料都疊在這張彩圖上）',
 }
 
 /**
