@@ -10,6 +10,7 @@ export function MapInfoBar({ map }: { map: L.Map }) {
   const mode = useTacticalStore((s) => s.mode)
   const opticalSource = useTacticalStore((s) => s.opticalSource)
   const observationDate = useTacticalStore((s) => s.observationDate)
+  const setMapView = useTacticalStore((s) => s.setMapView)
   const [center, setCenter] = useState<{ lat: number; lng: number; zoom: number }>(() => {
     const c = map.getCenter()
     return { lat: c.lat, lng: c.lng, zoom: map.getZoom() }
@@ -18,13 +19,16 @@ export function MapInfoBar({ map }: { map: L.Map }) {
   useEffect(() => {
     const update = () => {
       const c = map.getCenter()
-      setCenter({ lat: c.lat, lng: c.lng, zoom: map.getZoom() })
+      const v = { lat: c.lat, lng: c.lng, zoom: map.getZoom() }
+      setCenter(v)
+      setMapView(v) // 供「在畫面中心新增點位」讀取
     }
+    update()
     map.on('move zoom', update)
     return () => {
       map.off('move zoom', update)
     }
-  }, [map])
+  }, [map, setMapView])
 
   const coord = `${fmt(center.lat)}${center.lat >= 0 ? 'N' : 'S'} ${fmt(center.lng)}${center.lng >= 0 ? 'E' : 'W'}`
 

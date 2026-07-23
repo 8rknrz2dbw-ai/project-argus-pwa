@@ -18,6 +18,16 @@ import {
   type SavedCoord,
   type HistItem,
 } from '../lib/savedCoords'
+import {
+  loadGroups,
+  persistGroups,
+  loadPoints,
+  persistPoints,
+  loadHidden,
+  persistHidden,
+  type PoiGroup,
+  type PoiPoint,
+} from '../lib/poi'
 
 /**
  * 全域戰術狀態 —— 整個 App 唯一的「真相來源 (single source of truth)」。
@@ -138,6 +148,15 @@ interface TacticalState {
   savedCoords: SavedCoord[]
   coordHistory: HistItem[]
 
+  // ── 自訂點位/群組（安檢所等，私有・只存本機）───────────
+  poiGroups: PoiGroup[]
+  poiPoints: PoiPoint[]
+  /** 一鍵全部隱藏（旁邊有人時保護隱私）。 */
+  poiHidden: boolean
+
+  // ── 地圖畫面中心（給「在中心新增點位」用）─────────────
+  mapView: { lat: number; lng: number; zoom: number }
+
   // ── 我的位置 (GPS，跨模式保留) ──────────────────────
   ownPosition: { lat: number; lng: number; accuracy: number } | null
   /** 航跡記錄中（連續 GPS）。 */
@@ -204,6 +223,15 @@ interface TacticalState {
   setMcSummary: (s: TacticalState['mcSummary']) => void
   setShowSearchPattern: (v: boolean) => void
   setTrackSpacingNm: (nm: number) => void
+  // 自訂點位/群組
+  addPoiGroup: (g: { name: string; icon: string; color: string }) => string
+  updatePoiGroup: (id: string, patch: Partial<Omit<PoiGroup, 'id'>>) => void
+  removePoiGroup: (id: string) => void
+  addPoiPoint: (p: { groupId: string; label: string; lat: number; lng: number; note?: string; elevM?: number | null }) => void
+  updatePoiPoint: (id: string, patch: Partial<Omit<PoiPoint, 'id'>>) => void
+  removePoiPoint: (id: string) => void
+  setPoiHidden: (v: boolean) => void
+  setMapView: (v: { lat: number; lng: number; zoom: number }) => void
 }
 
 // 預設用「昨天」：衛星影像（GIBS/Sentinel）當天常還沒處理好，昨天最保險。
@@ -251,6 +279,10 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   flyToTarget: null,
   savedCoords: loadSaved(),
   coordHistory: loadHistory(),
+  poiGroups: loadGroups(),
+  poiPoints: loadPoints(),
+  poiHidden: loadHidden(),
+  mapView: { lat: 24.0, lng: 121.5, zoom: 7 },
   measuring: false,
   measurePoints: [],
   ownPosition: null,
@@ -409,6 +441,63 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setMcSummary: (s) => set({ mcSummary: s }),
   setShowSearchPattern: (v) => set({ showSearchPattern: v }),
   setTrackSpacingNm: (nm) => set({ trackSpacingNm: nm }),
+  addPoiGroup: (g) => {
+    const id = newId(Date.now())
+    set((st) => {
+      const poiGroups = [...st.poiGroups, { id, name: g.name.trim() || '新群組', icon: g.icon, color: g.color, visible: true }]
+      persistGroups(poiGroups)
+      return { poiGroups }
+    })
+    return id
+  },
+  updatePoiGroup: (id, patch) =>
+    set((st) => {
+      const poiGroups = st.poiGroups.map((g) => (g.id === id ? { ...g, ...patch } : g))
+      persistGroups(poiGroups)
+      return { poiGroups }
+    }),
+  removePoiGroup: (id) =>
+    set((st) => {
+      const poiGroups = st.poiGroups.filter((g) => g.id !== id)
+      const poiPoints = st.poiPoints.filter((p) => p.groupId !== id) // 連同群組內點位一起刪
+      persistGroups(poiGroups)
+      persistPoints(poiPoints)
+      return { poiGroups, poiPoints }
+    }),
+  addPoiPoint: (p) =>
+    set((st) => {
+      const now = Date.now()
+      const item: PoiPoint = {
+        id: newId(now),
+        groupId: p.groupId,
+        label: p.label.trim() || '未命名點位',
+        lat: p.lat,
+        lng: p.lng,
+        note: p.note?.trim() || undefined,
+        elevM: p.elevM,
+        createdAt: now,
+      }
+      const poiPoints = [item, ...st.poiPoints]
+      persistPoints(poiPoints)
+      return { poiPoints }
+    }),
+  updatePoiPoint: (id, patch) =>
+    set((st) => {
+      const poiPoints = st.poiPoints.map((p) => (p.id === id ? { ...p, ...patch } : p))
+      persistPoints(poiPoints)
+      return { poiPoints }
+    }),
+  removePoiPoint: (id) =>
+    set((st) => {
+      const poiPoints = st.poiPoints.filter((p) => p.id !== id)
+      persistPoints(poiPoints)
+      return { poiPoints }
+    }),
+  setPoiHidden: (v) => {
+    persistHidden(v)
+    set({ poiHidden: v })
+  },
+  setMapView: (v) => set({ mapView: v }),
 }))
 
 function defaultLabel(n: number): string {

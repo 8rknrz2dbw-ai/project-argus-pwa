@@ -15,6 +15,7 @@ import { TerritorialLayer, TerritorialToggle } from './TerritorialLayer'
 import { MapFlyTo } from './MapFlyTo'
 import { BrightSpotLayer } from './BrightSpotLayer'
 import { SavedCoordsLayer } from './SavedCoordsLayer'
+import { PoiLayer } from './PoiLayer'
 import { MeasureLayer } from './MeasureLayer'
 import { MapInfoBar } from '../components/MapInfoBar'
 
@@ -70,6 +71,7 @@ export function MapContainer() {
       {map && <MapFlyTo map={map} />}
       {map && <BrightSpotLayer map={map} />}
       {map && <SavedCoordsLayer map={map} />}
+      {map && <PoiLayer map={map} />}
       {map && <MeasureLayer map={map} />}
       {map && <MapInfoBar map={map} />}
     </div>
