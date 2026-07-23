@@ -26,7 +26,7 @@ export function StatusBar() {
         <span className="font-mono text-xs font-bold tracking-widest text-tactical-green">
           阿爾戈斯 · {MODE_LABEL[mode]}
         </span>
-        <span className="font-mono text-[9px] text-slate-500">v1.23</span>
+        <span className="font-mono text-[9px] text-slate-500">v1.24</span>
       </div>
       <span className="truncate font-mono text-[11px] text-slate-300">{statusMessage}</span>
     </div>

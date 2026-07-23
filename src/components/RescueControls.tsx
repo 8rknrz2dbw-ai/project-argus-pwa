@@ -4,6 +4,7 @@ import { bearingToText, DRIFT_TARGETS } from '../lib/drift'
 import { buildReport, shareReport } from '../lib/report'
 import { SatelliteQuickLinks } from './SatelliteQuickLinks'
 import { parseCoord } from '../lib/coordParse'
+import { sunTimes } from '../lib/sun'
 
 /**
  * 搜救推演控制面板：顯示即時海象摘要 + 漂流結果，並提示操作。
@@ -223,6 +224,9 @@ export function RescueControls() {
         </div>
       )}
 
+      {/* 日照窗口 / 天黑倒數（搜救時機）*/}
+      {mob && <DaylightWindow lat={mob.lat} lng={mob.lng} />}
+
       {/* CWA 在地潮汐（近岸擱淺/潮流窗口）*/}
       {mob && tide && tide.length > 0 && (
         <div className="rounded-lg border border-sky-500/40 bg-sky-500/5 p-2">
@@ -396,6 +400,48 @@ export function RescueControls() {
         <span>
           <span className="text-tactical-alert">◯</span> 搜索範圍
         </span>
+      </div>
+    </div>
+  )
+}
+
+/** 日照窗口 + 天黑倒數。SAR 最看「還有多久天黑」。 */
+function DaylightWindow({ lat, lng }: { lat: number; lng: number }) {
+  const now = Date.now()
+  const s = sunTimes(now, lat, lng)
+  const hm = (e: number | null) => {
+    if (e == null) return '—'
+    const d = new Date(e)
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+  // 倒數到「天黑」(民用暮光結束 dusk)；若已過，顯示明日日出。
+  let line: string
+  let urgent = false
+  if (s.polar === 'day') line = '永晝（此緯度目前不會天黑）'
+  else if (s.polar === 'night') line = '永夜（此緯度目前無日照）'
+  else if (s.dusk && now < s.dusk) {
+    const mins = Math.round((s.dusk - now) / 60000)
+    const h = Math.floor(mins / 60)
+    const m = mins % 60
+    line = `距天黑約 ${h > 0 ? `${h} 小時 ` : ''}${m} 分`
+    urgent = mins < 90
+  } else {
+    const next = sunTimes(now + 86400000, lat, lng)
+    line = `已入夜，明日日出 ${hm(next.sunrise)}`
+    urgent = true
+  }
+  return (
+    <div className={`rounded-lg border p-2 ${urgent ? 'border-amber-500/50 bg-amber-500/5' : 'border-slate-700 bg-slate-900/40'}`}>
+      <div className="flex items-center justify-between">
+        <span className={`text-[11px] font-semibold ${urgent ? 'text-amber-400' : 'text-slate-300'}`}>
+          ☀ 日照窗口 · {line}
+        </span>
+      </div>
+      <div className="mt-1 flex justify-between font-mono text-[10px] text-slate-400">
+        <span>曙光 {hm(s.dawn)}</span>
+        <span>日出 {hm(s.sunrise)}</span>
+        <span>日落 {hm(s.sunset)}</span>
+        <span>天黑 {hm(s.dusk)}</span>
       </div>
     </div>
   )
