@@ -89,6 +89,8 @@ interface TacticalState {
   // ── 海況熱力圖 (seastate) ────────────────────────────
   /** 熱力圖顯示哪個欄位：海溫或浪高。 */
   seaStateField: 'sst' | 'wave'
+  /** 目前畫面資料的實際範圍（動態上色/圖例用）。 */
+  seaStateRange: { min: number; max: number } | null
 
   // ── CWA 在地官方海象（潮汐 / 海面預報）────────────────
   /** 落海點附近的 CWA 潮汐事件（null=未取得/未設定）。 */
@@ -162,6 +164,7 @@ interface TacticalState {
   clearMeasure: () => void
   setShowTerritorial: (v: boolean) => void
   setSeaStateField: (f: 'sst' | 'wave') => void
+  setSeaStateRange: (r: { min: number; max: number } | null) => void
   setCwaTide: (t: TideEvent[] | null) => void
   setCwaSeaAreas: (s: SeaAreaForecast[] | null) => void
   setAnimEpoch: (e: number) => void
@@ -211,6 +214,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   trackSpacingNm: 1,
   vessels: [],
   seaStateField: 'sst',
+  seaStateRange: null,
   cwaTide: null,
   cwaSeaAreas: null,
   animEpoch: 0,
@@ -336,6 +340,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   clearMeasure: () => set({ measurePoints: [] }),
   setShowTerritorial: (v) => set({ showTerritorial: v }),
   setSeaStateField: (f) => set({ seaStateField: f }),
+  setSeaStateRange: (r) => set({ seaStateRange: r }),
   setCwaTide: (t) => set({ cwaTide: t }),
   setCwaSeaAreas: (s) => set({ cwaSeaAreas: s }),
   setAnimEpoch: (e) => set({ animEpoch: e }),

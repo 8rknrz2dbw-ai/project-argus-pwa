@@ -44,6 +44,16 @@ export function waveColor(m: number, alpha = 0.55): string {
   return `rgba(${r | 0},${g | 0},${b | 0},${alpha})`
 }
 
+/** 動態範圍上色：把顏色鋪滿「此畫面實際 min~max」，放大細微差異(海溫常僅差幾度)。 */
+export function sstColorDyn(c: number, min: number, max: number, alpha = 0.6): string {
+  const [r, g, b] = ramp(c, min, max, SST_COLORS)
+  return `rgba(${r | 0},${g | 0},${b | 0},${alpha})`
+}
+export function waveColorDyn(m: number, min: number, max: number, alpha = 0.6): string {
+  const [r, g, b] = ramp(m, min, max, WAVE_COLORS)
+  return `rgba(${r | 0},${g | 0},${b | 0},${alpha})`
+}
+
 /** 圖例刻度（給 UI 畫色條）。 */
 export const SST_LEGEND = { min: 18, max: 32, unit: '°C', colorAt: (c: number) => sstColor(c, 1) }
 export const WAVE_LEGEND = { min: 0, max: 5, unit: 'm', colorAt: (m: number) => waveColor(m, 1) }

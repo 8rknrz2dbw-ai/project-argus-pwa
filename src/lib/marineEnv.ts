@@ -18,6 +18,8 @@ export interface MarineEnv {
   waveHeight: number
   /** 海表溫度 °C */
   sst: number
+  /** 此點是否為陸地（海洋 API 無海溫/浪高回傳→視為陸地，海況圖不上色）。 */
+  onLand: boolean
   /** 資料是否為即時抓取（false = 用了離線 fallback）。 */
   live: boolean
 }
@@ -65,6 +67,7 @@ function fallback(lat: number, lng: number): MarineEnv {
     currentDir: c.dir,
     waveHeight: 1.2,
     sst: 28,
+    onLand: false,
     live: false,
   }
 }
@@ -92,6 +95,7 @@ export async function fetchEnvAt(lat: number, lng: number): Promise<MarineEnv> {
       currentDir: num(m?.current?.ocean_current_direction, 20),
       waveHeight: num(m?.current?.wave_height, 1),
       sst: num(m?.current?.sea_surface_temperature, 26),
+      onLand: !isFiniteNum(m?.current?.sea_surface_temperature),
       live: true,
     }
   } catch {
@@ -126,6 +130,7 @@ export async function fetchEnvGrid(points: [number, number][]): Promise<MarineEn
       currentDir: num(mArr[i]?.current?.ocean_current_direction, 20),
       waveHeight: num(mArr[i]?.current?.wave_height, 1),
       sst: num(mArr[i]?.current?.sea_surface_temperature, 26),
+      onLand: !isFiniteNum(mArr[i]?.current?.sea_surface_temperature),
       live: true,
     }))
   } catch {
@@ -137,6 +142,9 @@ export async function fetchEnvGrid(points: [number, number][]): Promise<MarineEn
 
 function num(v: unknown, fallbackVal: number): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : fallbackVal
+}
+function isFiniteNum(v: unknown): boolean {
+  return typeof v === 'number' && Number.isFinite(v)
 }
 function kmhToMs(kmh: number): number {
   return kmh / 3.6

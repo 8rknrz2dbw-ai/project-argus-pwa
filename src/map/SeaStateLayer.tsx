@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import { useTacticalStore } from '../store/tacticalStore'
 import { fetchEnvGrid, type MarineEnv } from '../lib/marineEnv'
-import { sstColor, waveColor } from '../lib/colorScale'
+import { sstColorDyn, waveColorDyn } from '../lib/colorScale'
 import { isCwaConfigured } from '../lib/config'
 import { fetchCwaSeaAreas } from '../lib/cwaMarine'
 
@@ -15,6 +15,7 @@ export function SeaStateLayer({ map }: { map: L.Map }) {
   const field = useTacticalStore((s) => s.seaStateField)
   const setStatus = useTacticalStore((s) => s.setStatus)
   const setCwaSeaAreas = useTacticalStore((s) => s.setCwaSeaAreas)
+  const setSeaStateRange = useTacticalStore((s) => s.setSeaStateRange)
 
   const groupRef = useRef<L.LayerGroup | null>(null)
   const envRef = useRef<MarineEnv[]>([])
@@ -33,23 +34,39 @@ export function SeaStateLayer({ map }: { map: L.Map }) {
       const b = map.getBounds()
       const dLat = (b.getNorth() - b.getSouth()) / rows
       const dLng = (b.getEast() - b.getWest()) / cols
+      // 只用「海上」格算動態範圍（陸地無海溫，排除；否則海溫幾乎同色看不出差異）。
+      const seaVals = envRef.current
+        .filter((e) => !e.onLand)
+        .map((e) => (field === 'sst' ? e.sst : e.waveHeight))
+      let min = Math.min(...seaVals)
+      let max = Math.max(...seaVals)
+      if (!Number.isFinite(min) || !Number.isFinite(max)) {
+        min = field === 'sst' ? 24 : 0
+        max = field === 'sst' ? 30 : 3
+      }
+      if (max - min < (field === 'sst' ? 0.5 : 0.2)) max = min + (field === 'sst' ? 0.5 : 0.2)
+      setSeaStateRange({ min, max })
+
       envRef.current.forEach((e, idx) => {
         const r = Math.floor(idx / cols)
         const c = idx % cols
         const south = b.getSouth() + r * dLat
         const west = b.getWest() + c * dLng
+        const cell: [[number, number], [number, number]] = [
+          [south, west],
+          [south + dLat, west + dLng],
+        ]
+        if (e.onLand) {
+          // 陸地：不畫海溫，改淡灰斜紋、popup 標明「陸地」，避免誤標海溫。
+          L.rectangle(cell, { stroke: false, fillColor: '#334155', fillOpacity: 0.12 })
+            .bindPopup('🏝 陸地（無海面資料）')
+            .addTo(group)
+          return
+        }
         const val = field === 'sst' ? e.sst : e.waveHeight
-        const color = field === 'sst' ? sstColor(e.sst) : waveColor(e.waveHeight)
-        L.rectangle(
-          [
-            [south, west],
-            [south + dLat, west + dLng],
-          ],
-          { stroke: false, fillColor: color, fillOpacity: 1 },
-        )
-          .bindPopup(
-            field === 'sst' ? `海溫 ${val.toFixed(1)} °C` : `浪高 ${val.toFixed(1)} m`,
-          )
+        const color = field === 'sst' ? sstColorDyn(e.sst, min, max) : waveColorDyn(e.waveHeight, min, max)
+        L.rectangle(cell, { stroke: false, fillColor: color, fillOpacity: 1 })
+          .bindPopup(field === 'sst' ? `海溫 ${val.toFixed(1)} °C` : `浪高 ${val.toFixed(1)} m`)
           .addTo(group)
       })
     }
@@ -70,8 +87,16 @@ export function SeaStateLayer({ map }: { map: L.Map }) {
       const envs = await fetchEnvGrid(pts)
       envRef.current = envs
       draw()
+      const rng = useTacticalStore.getState().seaStateRange
+      const rangeTxt = rng
+        ? field === 'sst'
+          ? `此區 ${rng.min.toFixed(1)}–${rng.max.toFixed(1)}°C`
+          : `此區 ${rng.min.toFixed(1)}–${rng.max.toFixed(1)}m`
+        : ''
       setStatus(
-        field === 'sst' ? '海況：海表溫度分佈（越紅越暖）' : '海況：浪高分佈（越紅紫越大浪）',
+        field === 'sst'
+          ? `海況：海表溫度（動態色階放大差異，${rangeTxt}；陸地不上色）`
+          : `海況：浪高（動態色階，${rangeTxt}；陸地不上色）`,
       )
     }
 
