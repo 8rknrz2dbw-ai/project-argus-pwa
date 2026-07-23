@@ -3,7 +3,7 @@ import { useTacticalStore } from '../store/tacticalStore'
 import { bearingToText, DRIFT_TARGETS } from '../lib/drift'
 import { buildReport, shareReport } from '../lib/report'
 import { SatelliteQuickLinks } from './SatelliteQuickLinks'
-import { parseCoord } from '../lib/coordParse'
+import { parseCoord, fmtDDM } from '../lib/coordParse'
 import { sunTimes } from '../lib/sun'
 import { fmtClock, driftEpoch } from '../lib/timefmt'
 import { bearingDeg } from '../map/MeasureLayer'
@@ -21,8 +21,7 @@ export function RescueControls() {
   const setScrubHours = useTacticalStore((s) => s.setScrubHours)
   const driftTargetId = useTacticalStore((s) => s.driftTargetId)
   const setDriftTarget = useTacticalStore((s) => s.setDriftTarget)
-  const driftMode = useTacticalStore((s) => s.driftMode)
-  const setDriftMode = useTacticalStore((s) => s.setDriftMode)
+  const sourcePoints = useTacticalStore((s) => s.sourcePoints)
   const incidentTime = useTacticalStore((s) => s.incidentTime)
   const setIncidentTime = useTacticalStore((s) => s.setIncidentTime)
   const showProbability = useTacticalStore((s) => s.showProbability)
@@ -31,18 +30,20 @@ export function RescueControls() {
   const setShowSearchPattern = useTacticalStore((s) => s.setShowSearchPattern)
   const trackSpacingNm = useTacticalStore((s) => s.trackSpacingNm)
   const setTrackSpacingNm = useTacticalStore((s) => s.setTrackSpacingNm)
-  const reverse = driftMode === 'backward'
   const setMob = useTacticalStore((s) => s.setManOverboard)
   const setResult = useTacticalStore((s) => s.setRescueResult)
   const setStatus = useTacticalStore((s) => s.setStatus)
 
   const mcSummary = useTacticalStore((s) => s.mcSummary)
   const tide = useTacticalStore((s) => s.cwaTide)
+  const savedCoords = useTacticalStore((s) => s.savedCoords)
+  const gotoCoord = useTacticalStore((s) => s.gotoCoord)
   const driftTargetLabel =
     DRIFT_TARGETS.find((t) => t.id === driftTargetId)?.label ?? '落海人'
 
   // 手動輸入座標（實戰時座標常由無線電報來）
   const [manual, setManual] = useState(false)
+  const [pickSaved, setPickSaved] = useState(false)
   const [latStr, setLatStr] = useState('')
   const [lngStr, setLngStr] = useState('')
   const placeByCoord = () => {
@@ -76,8 +77,8 @@ export function RescueControls() {
       mob,
       env,
       drift,
-      reverse,
       targetLabel: driftTargetLabel,
+      reverse: false,
       mc: mcSummary ? { peak: mcSummary.peak, radius95: mcSummary.radius95 } : null,
       sun: { sunrise: sun.sunrise, sunset: sun.sunset, dusk: sun.dusk },
       tide,
@@ -99,31 +100,17 @@ export function RescueControls() {
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-slate-700 bg-tactical-panel/90 p-3">
-      {/* 順推 / 逆推 切換 */}
-      <div className="grid grid-cols-2 gap-1 rounded-lg border border-slate-700 p-1">
-        <button
-          onClick={() => setDriftMode('forward')}
-          className={`rounded py-1.5 text-xs font-bold transition-all active:scale-95 ${
-            !reverse ? 'bg-tactical-alert/20 text-tactical-alert' : 'text-slate-400'
-          }`}
-        >
-          順推 · 落海→漂到哪
-        </button>
-        <button
-          onClick={() => setDriftMode('backward')}
-          className={`rounded py-1.5 text-xs font-bold transition-all active:scale-95 ${
-            reverse ? 'bg-amber-500/20 text-amber-400' : 'text-slate-400'
-          }`}
-        >
-          逆推 · 發現→從哪來
-        </button>
+      {/* 落海點/回報時間（datum）＝時間軸的 0 點；一條軸同時看來源與去向 */}
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-2 py-1.5 text-[10px] leading-relaxed text-amber-300">
+        🔴 順推=未來漂到哪　🟠 逆推=從哪漂來。下方一條時間軸即可拖到任一時刻，
+        紅/橙兩條軌跡同時呈現，不必切換方向。
       </div>
 
-      {/* 回報/落海時間（可為過去，用逐時歷史海象積分）*/}
-      {!reverse && (
+      {/* 回報/落海時間（datum，可為過去，用逐時歷史海象積分）*/}
+      {
         <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-2">
           <div className="mb-1 flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-amber-400">🕐 回報/落海時間</span>
+            <span className="text-[11px] font-semibold text-amber-400">🕐 回報/落海時間（基準點）</span>
             <button
               onClick={() => setIncidentTime(Date.now())}
               className="rounded border border-slate-600 px-2 py-0.5 text-[10px] text-slate-300 active:scale-95"
@@ -143,8 +130,44 @@ export function RescueControls() {
           />
           <p className="mt-1 text-[10px] text-slate-500">
             {elapsedHint(incidentTime)}
-            ｜用「該時刻到現在」的逐時真實海流/風積分，⌖綠圈=目標現在位置
+            ｜⌖綠圈=目標現在位置（自 datum 順推至今）
           </p>
+        </div>
+      }
+
+      {/* 從已存座標（最愛/釘選）直接選為搜救點 */}
+      {savedCoords.length > 0 && (
+        <div>
+          <button
+            onClick={() => setPickSaved(!pickSaved)}
+            className="text-[11px] text-pink-300 underline-offset-2 hover:underline"
+          >
+            {pickSaved ? '▾ 從我的座標選' : `▸ 從我的座標選（📌最愛/釘選 ${savedCoords.length}）`}
+          </button>
+          {pickSaved && (
+            <div className="mt-1 flex max-h-28 flex-col gap-0.5 overflow-y-auto">
+              {savedCoords.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    setMob({ lat: c.lat, lng: c.lng })
+                    setPickSaved(false)
+                    setStatus(`已用「${c.label}」為搜救點`)
+                  }}
+                  className="flex items-center justify-between rounded border border-slate-700 bg-slate-900/50 px-2 py-1 text-left active:scale-95"
+                >
+                  <span className="truncate text-[11px] text-slate-200">
+                    {c.pinned ? '📌' : ''}
+                    {c.favorite ? '★' : ''}
+                    {c.label}
+                  </span>
+                  <span className="shrink-0 font-mono text-[9px] text-slate-500">
+                    {c.lat.toFixed(3)}, {c.lng.toFixed(3)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -184,17 +207,8 @@ export function RescueControls() {
 
       {!mob && (
         <p className="text-xs leading-relaxed text-slate-300">
-          {reverse ? (
-            <>
-              🔎 <b className="text-amber-400">點地圖上「發現漂流物 / 目擊」的位置</b>，
-              系統回推當初可能的落海來源與範圍。
-            </>
-          ) : (
-            <>
-              🆘 <b className="text-tactical-alert">點地圖上的落海位置</b>，系統用風場＋洋流
-              預判漂流方向與搜索範圍。
-            </>
-          )}
+          🆘 <b className="text-tactical-alert">點地圖標記位置</b>（或用上方座標）。系統會同時算出
+          <b className="text-tactical-alert">🔴 順推（漂到哪）</b>與<b className="text-amber-400">🟠 逆推（從哪來）</b>兩條軌跡。
         </p>
       )}
 
@@ -270,24 +284,28 @@ export function RescueControls() {
         </div>
       )}
 
-      {/* 漂流結果 */}
+      {/* 漂流結果：順推(未來)+逆推(來源)沿路座標，點一下飛過去 */}
       {status === 'loading' && <p className="text-xs text-tactical-cyan">計算漂流中…</p>}
       {status === 'done' && drift.length > 0 && (
-        <div className="flex flex-col gap-1 rounded border border-rose-500/40 bg-rose-500/5 p-2">
-          <div className="mb-1 text-[11px] font-semibold text-tactical-alert">
-            {reverse ? '回推來源（浬）' : '漂流預判（浬）'}
-          </div>
-          {drift.map((p) => (
-            <div key={p.hours} className="flex justify-between font-mono text-[11px] text-slate-300">
-              <span className="text-tactical-alert">
-                {p.hours}h {reverse ? '前' : '後'}
-              </span>
-              <span>
-                {bearingToText(p.bearingDeg)}方 {(p.driftMeters / 1852).toFixed(1)} 浬
-              </span>
-              <span className="text-slate-400">半徑 {(p.radiusMeters / 1852).toFixed(1)}</span>
-            </div>
-          ))}
+        <div className="flex flex-col gap-2">
+          <CoordTrack
+            title="🔴 順推 · 未來漂到哪（沿路座標，點擊飛過去）"
+            points={drift}
+            reverse={false}
+            incidentTime={incidentTime}
+            color="text-tactical-alert"
+            onGo={gotoCoord}
+          />
+          {sourcePoints.length > 0 && (
+            <CoordTrack
+              title="🟠 逆推 · 從哪漂來（可能落海來源）"
+              points={sourcePoints}
+              reverse={true}
+              incidentTime={incidentTime}
+              color="text-amber-400"
+              onGo={gotoCoord}
+            />
+          )}
         </div>
       )}
 
@@ -347,31 +365,31 @@ export function RescueControls() {
         </div>
       )}
 
-      {/* 時間軸拉桿：拉到任意時間看漂流位置（顯示實際日期時間）*/}
+      {/* 雙向時間軸：一條軸 −72h(來源) … 0(落海點) … +72h(漂流) */}
       {status === 'done' && drift.length > 0 && (
         <div>
           <div className="mb-1 flex items-center justify-between">
-            <label className="text-[11px] font-semibold text-amber-400">
-              ⏱ 時間軸（{reverse ? '往前回推' : '落海後經過'}）
-            </label>
+            <label className="text-[11px] font-semibold text-amber-400">⏱ 雙向時間軸</label>
             <span className="font-mono text-[11px] text-amber-400">
               {scrubHours === 0
-                ? '關'
-                : `${fmtClock(driftEpoch(incidentTime, scrubHours, reverse, Date.now()))}（${reverse ? '−' : '+'}${scrubHours}h）`}
+                ? '落海點（0h）'
+                : `${fmtClock(driftEpoch(incidentTime, Math.abs(scrubHours), scrubHours < 0))}（${scrubHours < 0 ? '−' : '+'}${Math.abs(scrubHours)}h ${scrubHours < 0 ? '來源' : '漂流'}）`}
             </span>
           </div>
           <input
             type="range"
-            min={0}
+            min={-72}
             max={72}
             step={1}
             value={scrubHours}
             onChange={(e) => setScrubHours(Number(e.target.value))}
             className="w-full accent-amber-400"
           />
-          <p className="mt-1 text-[10px] text-slate-500">
-            可拉到 72 小時（3 天）。超過數小時為近似，風流會隨時間變化。
-          </p>
+          <div className="mt-0.5 flex justify-between font-mono text-[9px] text-slate-500">
+            <span className="text-amber-400">◀ 逆推 −72h</span>
+            <span>落海點 0</span>
+            <span className="text-tactical-alert">順推 +72h ▶</span>
+          </div>
         </div>
       )}
 
@@ -388,7 +406,7 @@ export function RescueControls() {
       {/* 我的位置 → 落海點 距離 */}
       {distNm !== null && (
         <div className="flex items-center justify-between rounded border border-sky-500/40 bg-sky-500/5 px-2 py-1.5 text-[11px]">
-          <span className="text-sky-300">📍 我 → {reverse ? '發現點' : '落海點'}</span>
+          <span className="text-sky-300">📍 我 → 落海點</span>
           <span className="font-mono text-sky-200">{distNm.toFixed(1)} 浬</span>
         </div>
       )}
@@ -466,6 +484,57 @@ function DaylightWindow({ lat, lng }: { lat: number; lng: number }) {
         <span>日落 {hm(s.sunset)}</span>
         <span>天黑 {hm(s.dusk)}</span>
       </div>
+    </div>
+  )
+}
+
+/** 一條方向的沿路座標清單（可點擊飛過去）。 */
+function CoordTrack({
+  title,
+  points,
+  reverse,
+  incidentTime,
+  color,
+  onGo,
+}: {
+  title: string
+  points: { hours: number; lat: number; lng: number; driftMeters: number; radiusMeters: number; bearingDeg: number }[]
+  reverse: boolean
+  incidentTime: number
+  color: string
+  onGo: (lat: number, lng: number, zoom?: number) => void
+}) {
+  const border = reverse ? 'border-amber-500/40' : 'border-rose-500/40'
+  const bg = reverse ? 'bg-amber-500/5' : 'bg-rose-500/5'
+  return (
+    <div className={`flex flex-col gap-1 rounded border ${border} ${bg} p-2`}>
+      <span className={`text-[11px] font-semibold ${color}`}>{title}</span>
+      {points.map((p) => (
+        <button
+          key={p.hours}
+          onClick={() => onGo(p.lat, p.lng, 12)}
+          className="flex flex-col rounded border border-slate-700 bg-slate-900/40 px-2 py-1 text-left active:scale-95"
+        >
+          <div className="flex items-center justify-between">
+            <span className={`font-mono text-[11px] font-bold ${color}`}>
+              {fmtClock(driftEpoch(incidentTime, p.hours, reverse))}
+              <span className="ml-1 font-normal text-slate-500">
+                {reverse ? '−' : '+'}
+                {p.hours}h
+              </span>
+            </span>
+            <span className="font-mono text-[10px] text-slate-400">
+              {bearingToText(p.bearingDeg)}方 {(p.driftMeters / 1852).toFixed(1)} 浬
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[10px] text-slate-300">{fmtDDM(p.lat, p.lng)}</span>
+            <span className="font-mono text-[9px] text-slate-500">
+              半徑 {(p.radiusMeters / 1852).toFixed(1)} 浬
+            </span>
+          </div>
+        </button>
+      ))}
     </div>
   )
 }

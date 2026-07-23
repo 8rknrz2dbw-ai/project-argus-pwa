@@ -30,7 +30,6 @@ export function RescueLayer({ map }: { map: L.Map }) {
   const manOverboard = useTacticalStore((s) => s.manOverboard)
   const scrubHours = useTacticalStore((s) => s.scrubHours)
   const driftLeeway = useTacticalStore((s) => s.driftLeeway)
-  const driftMode = useTacticalStore((s) => s.driftMode)
   const showProbability = useTacticalStore((s) => s.showProbability)
   const showSearchPattern = useTacticalStore((s) => s.showSearchPattern)
   const trackSpacingNm = useTacticalStore((s) => s.trackSpacingNm)
@@ -38,13 +37,11 @@ export function RescueLayer({ map }: { map: L.Map }) {
   const setMcSummary = useTacticalStore((s) => s.setMcSummary)
   const driftPoints = useTacticalStore((s) => s.driftPoints)
   const setDriftPoints = useTacticalStore((s) => s.setDriftPoints)
+  const setSourcePoints = useTacticalStore((s) => s.setSourcePoints)
   const incidentTime = useTacticalStore((s) => s.incidentTime)
   const rescueSeries = useTacticalStore((s) => s.rescueSeries)
   const setRescueSeries = useTacticalStore((s) => s.setRescueSeries)
   const setCwaTide = useTacticalStore((s) => s.setCwaTide)
-  const reverse = driftMode === 'backward'
-  // 積分基準時刻：逆推從「現在」往回；順推從「回報時間」往後。
-  const baseEpoch = reverse ? Date.now() : incidentTime
 
   const fieldRef = useRef<L.LayerGroup | null>(null) // 風/流箭頭
   const driftRef = useRef<L.LayerGroup | null>(null) // 落海點 + 漂流
@@ -159,100 +156,86 @@ export function RescueLayer({ map }: { map: L.Map }) {
     drift.clearLayers()
     if (!manOverboard) {
       setDriftPoints([])
+      setSourcePoints([])
       return
     }
-    drawManOverboard(drift, manOverboard.lat, manOverboard.lng, reverse)
-    if (!rescueSeries) return
+    drawManOverboard(drift, manOverboard.lat, manOverboard.lng, false)
+    if (!rescueSeries) {
+      setDriftPoints([])
+      setSourcePoints([])
+      return
+    }
     // 離線(氣候平均)時用「空間黑潮場」逐步取流→軌跡隨位置彎曲，不再假直線。
     const spatial = rescueSeries.live ? undefined : climatologyCurrent
-    // 用逐時真實海象「時變積分」（比單一快照外推準）。
-    const points = integrateDriftSeries(
-      manOverboard.lat,
-      manOverboard.lng,
-      rescueSeries,
-      baseEpoch,
-      [1, 6, 12, 24, 48, 72],
-      driftLeeway,
-      reverse,
-      0,
-      spatial,
-    )
-    // 逐時完整路徑（每小時一點）→ 畫成「彎曲」軌跡，隨風/流方向轉折，不再是假直線。
+    const milestones = [1, 6, 12, 24, 48, 72]
     const fullHours = Array.from({ length: 72 }, (_, i) => i + 1)
-    const fullPath = integrateDriftSeries(
-      manOverboard.lat,
-      manOverboard.lng,
-      rescueSeries,
-      baseEpoch,
-      fullHours,
-      driftLeeway,
-      reverse,
-      0,
-      spatial,
-    )
-    drawDrift(drift, manOverboard.lat, manOverboard.lng, points, fullPath, reverse, incidentTime)
-    setDriftPoints(points)
+    const base = incidentTime // datum 時刻＝回報/落海時間
+    const integ = (hrs: number[], rev: boolean) =>
+      integrateDriftSeries(manOverboard.lat, manOverboard.lng, rescueSeries, base, hrs, driftLeeway, rev, 0, spatial)
 
-    // 順推且回報時間在過去 → 標出「現在」的預測位置（最重要）。
+    // 一次算好「順推(未來漂)」與「逆推(來源)」兩個方向——一條時間軸都呈現。
+    const fwd = integ(milestones, false)
+    const fwdFull = integ(fullHours, false)
+    const bwd = integ(milestones, true)
+    const bwdFull = integ(fullHours, true)
+
+    // 逆推來源軌跡（琥珀）+ 順推漂流軌跡（紅），都從 datum(✚) 出發。
+    drawDrift(drift, manOverboard.lat, manOverboard.lng, bwd, bwdFull, true, incidentTime, '#f59e0b')
+    drawDrift(drift, manOverboard.lat, manOverboard.lng, fwd, fwdFull, false, incidentTime, '#f43f5e')
+    setDriftPoints(fwd)
+    setSourcePoints(bwd)
+
+    // 回報時間在過去 → 標出「現在」的預測位置（最重要）。
     const elapsedH = (Date.now() - incidentTime) / 3600000
-    if (!reverse && elapsedH >= 1) {
-      const [nowP] = integrateDriftSeries(
-        manOverboard.lat,
-        manOverboard.lng,
-        rescueSeries,
-        baseEpoch,
-        [Math.min(72, Math.round(elapsedH))],
-        driftLeeway,
-        false,
-        0,
-        spatial,
-      )
+    if (elapsedH >= 1) {
+      const [nowP] = integ([Math.min(72, Math.round(elapsedH))], false)
       if (nowP) drawNowMarker(drift, nowP.lat, nowP.lng, elapsedH, nowP.radiusMeters)
     }
 
     setRescueStatus('done')
-    const last = points[points.length - 1]
-    const when = reverse ? `${last.hours}h 前` : `${last.hours}h 後`
-    const verb = reverse ? '回推來源' : '漂流預判'
     const src = rescueSeries.live ? '逐時歷史/預報海象' : '黑潮氣候平均(離線)'
+    const lf = fwd[fwd.length - 1]
     setStatus(
-      `${verb}(${src})：${when}約在 ${bearingToText(last.bearingDeg)}方 ${(last.driftMeters / 1852).toFixed(1)} 浬，半徑 ${(last.radiusMeters / 1852).toFixed(1)} 浬`,
+      `漂流雙向推演(${src})：紅=順推未來、橙=逆推來源；72h 順推 ${bearingToText(lf.bearingDeg)}方 ${(lf.driftMeters / 1852).toFixed(1)} 浬`,
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, manOverboard, rescueSeries, driftLeeway, reverse, baseEpoch, incidentTime])
+  }, [mode, manOverboard, rescueSeries, driftLeeway, incidentTime])
 
-  // ── 時間軸 scrubber：拉桿到任意小時，畫出該時刻的漂流位置 ──
+  // ── 時間軸 scrubber：一條軸 −72(來源)…0(落海點)…+72(漂流)，畫該時刻位置 ──
   useEffect(() => {
     if (mode !== 'rescue') return
     if (!scrubRef.current) scrubRef.current = L.layerGroup().addTo(map)
     const g = scrubRef.current
     g.clearLayers()
-    if (scrubHours > 0 && manOverboard && rescueSeries) {
+    if (scrubHours !== 0 && manOverboard && rescueSeries) {
+      const rev = scrubHours < 0
+      const absH = Math.abs(scrubHours)
       const [p] = integrateDriftSeries(
         manOverboard.lat,
         manOverboard.lng,
         rescueSeries,
-        baseEpoch,
-        [scrubHours],
+        incidentTime,
+        [absH],
         driftLeeway,
-        reverse,
+        rev,
         0,
         rescueSeries.live ? undefined : climatologyCurrent,
       )
       if (!p) return
+      const col = rev ? '#f59e0b' : '#fbbf24'
       L.circle([p.lat, p.lng], {
         radius: p.radiusMeters,
-        color: '#fbbf24',
+        color: col,
         weight: 2,
-        fillColor: '#fbbf24',
-        fillOpacity: 0.12,
+        fillColor: col,
+        fillOpacity: 0.15,
       }).addTo(g)
       L.marker([p.lat, p.lng], {
         icon: L.divIcon({
           className: '',
-          html: `<div class="scrub-label">${fmtClock(driftEpoch(incidentTime, scrubHours, reverse, Date.now()))}<br/><span style="opacity:.75">${reverse ? '−' : '+'}${scrubHours}h</span></div>`,
-          iconSize: [86, 28],
-          iconAnchor: [43, 14],
+          html: `<div class="scrub-label">${fmtClock(driftEpoch(incidentTime, absH, rev))}<br/><span style="opacity:.75">${rev ? '−' : '+'}${absH}h ${rev ? '來源' : '漂流'}</span></div>`,
+          iconSize: [92, 28],
+          iconAnchor: [46, 14],
         }),
         zIndexOffset: 1100,
       }).addTo(g)
@@ -260,7 +243,7 @@ export function RescueLayer({ map }: { map: L.Map }) {
     return () => {
       g.clearLayers()
     }
-  }, [mode, scrubHours, manOverboard, rescueSeries, driftLeeway, reverse, baseEpoch, map])
+  }, [mode, scrubHours, manOverboard, rescueSeries, driftLeeway, incidentTime, map])
 
   // ── 蒙地卡羅機率密度圖 (SAROPS 式) ──────────────────────
   useEffect(() => {
@@ -273,15 +256,17 @@ export function RescueLayer({ map }: { map: L.Map }) {
       return
     }
 
-    const hours = scrubHours > 0 ? scrubHours : 6
+    // 依時間軸拉桿：正=順推機率、負=逆推來源機率、0=預設 6h 順推。
+    const hours = scrubHours !== 0 ? Math.abs(scrubHours) : 6
+    const mcRev = scrubHours < 0
     const mc = monteCarloSeries({
       lat: manOverboard.lat,
       lng: manOverboard.lng,
       series: rescueSeries,
-      baseEpoch,
+      baseEpoch: incidentTime,
       hours,
       leeway: driftLeeway,
-      reverse,
+      reverse: mcRev,
       n: 800,
       spatialCurrent: rescueSeries.live ? undefined : climatologyCurrent,
     })
@@ -308,16 +293,16 @@ export function RescueLayer({ map }: { map: L.Map }) {
         zIndexOffset: 1200,
       })
         .bindPopup(
-          `<b style="color:#f43f5e">最高機率位置</b><br/>${hours}h ${reverse ? '前' : '後'}｜95% 範圍半徑 ${(mc.radius95 / 1852).toFixed(1)} 浬<br/>800 粒子蒙地卡羅（時變）`,
+          `<b style="color:#f43f5e">最高機率位置</b><br/>${hours}h ${mcRev ? '前(來源)' : '後(漂流)'}｜95% 範圍半徑 ${(mc.radius95 / 1852).toFixed(1)} 浬<br/>800 粒子蒙地卡羅（時變）`,
         )
         .addTo(g)
     }
     setMcSummary({ peak: mc.peak, centroid: mc.centroid, radius95: mc.radius95 })
     setStatus(
-      `蒙地卡羅機率圖：${hours}h${reverse ? "前" : "後"}，800 粒子(時變)，95% 範圍半徑 ${(mc.radius95 / 1852).toFixed(1)} 浬`,
+      `蒙地卡羅機率圖：${hours}h${mcRev ? '前(來源)' : '後(漂流)'}，800 粒子(時變)，95% 範圍半徑 ${(mc.radius95 / 1852).toFixed(1)} 浬`,
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, showProbability, manOverboard, rescueSeries, driftLeeway, reverse, scrubHours, baseEpoch])
+  }, [mode, showProbability, manOverboard, rescueSeries, driftLeeway, scrubHours, incidentTime])
 
   // ── 平行梳掃搜索航線 ──────────────────────────────────
   useEffect(() => {
@@ -500,31 +485,31 @@ function drawDrift(
   fullPath: { hours: number; lat: number; lng: number }[],
   reverse: boolean,
   incidentTime: number,
+  color = '#f43f5e',
 ) {
-  const now = Date.now()
   // 漂流/回推軌跡線：用「每小時」完整路徑，隨風/流方向轉折成真實曲線（非直線）。
   const line: [number, number][] = [
     [lat0, lng0],
     ...fullPath.map((p) => [p.lat, p.lng] as [number, number]),
   ]
-  L.polyline(line, { color: '#f43f5e', weight: 2, dashArray: '6 4' }).addTo(group)
+  L.polyline(line, { color, weight: 2, dashArray: '6 4' }).addTo(group)
 
   points.forEach((p, i) => {
     const emphasis = i === points.length - 1
     // 搜索圈
     L.circle([p.lat, p.lng], {
       radius: p.radiusMeters,
-      color: '#f43f5e',
+      color,
       weight: emphasis ? 2 : 1,
       opacity: 0.8,
-      fillColor: '#f43f5e',
+      fillColor: color,
       fillOpacity: emphasis ? 0.12 : 0.06,
     }).addTo(group)
     // 時間標籤：顯示實際日期時間（比 +Nh 直覺），下方小字附相對時
     L.marker([p.lat, p.lng], {
       icon: L.divIcon({
         className: '',
-        html: `<div class="drift-label">${fmtClockShort(driftEpoch(incidentTime, p.hours, reverse, now))}<br/><span style="opacity:.7">${reverse ? '−' : '+'}${p.hours}h</span></div>`,
+        html: `<div class="drift-label">${fmtClockShort(driftEpoch(incidentTime, p.hours, reverse))}<br/><span style="opacity:.7">${reverse ? '−' : '+'}${p.hours}h</span></div>`,
         iconSize: [66, 26],
         iconAnchor: [33, 13],
       }),
