@@ -5,6 +5,7 @@ import { buildReport, shareReport } from '../lib/report'
 import { SatelliteQuickLinks } from './SatelliteQuickLinks'
 import { parseCoord } from '../lib/coordParse'
 import { sunTimes } from '../lib/sun'
+import { bearingDeg } from '../map/MeasureLayer'
 
 /**
  * 搜救推演控制面板：顯示即時海象摘要 + 漂流結果，並提示操作。
@@ -69,6 +70,7 @@ export function RescueControls() {
 
   const share = async () => {
     if (!mob || !env) return
+    const sun = sunTimes(Date.now(), mob.lat, mob.lng)
     const text = buildReport({
       mob,
       env,
@@ -76,6 +78,15 @@ export function RescueControls() {
       reverse,
       targetLabel: driftTargetLabel,
       mc: mcSummary ? { peak: mcSummary.peak, radius95: mcSummary.radius95 } : null,
+      sun: { sunrise: sun.sunrise, sunset: sun.sunset, dusk: sun.dusk },
+      tide,
+      fromOwn:
+        own && mob
+          ? {
+              distNm: haversineNm(own.lat, own.lng, mob.lat, mob.lng),
+              bearingDeg: bearingDeg(own.lat, own.lng, mob.lat, mob.lng),
+            }
+          : null,
     })
     const how = await shareReport(text)
     setStatus(how === 'shared' ? '報告已分享' : how === 'copied' ? '報告已複製到剪貼簿' : '⚠ 分享失敗')
