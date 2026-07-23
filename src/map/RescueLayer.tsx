@@ -22,7 +22,9 @@ export function RescueLayer({ map }: { map: L.Map }) {
   const rescueEnv = useTacticalStore((s) => s.rescueEnv)
   const scrubHours = useTacticalStore((s) => s.scrubHours)
   const driftLeeway = useTacticalStore((s) => s.driftLeeway)
+  const driftMode = useTacticalStore((s) => s.driftMode)
   const setDriftPoints = useTacticalStore((s) => s.setDriftPoints)
+  const reverse = driftMode === 'backward'
 
   const fieldRef = useRef<L.LayerGroup | null>(null) // 風/流箭頭
   const driftRef = useRef<L.LayerGroup | null>(null) // 落海點 + 漂流
@@ -94,7 +96,7 @@ export function RescueLayer({ map }: { map: L.Map }) {
       setDriftPoints([])
       return
     }
-    drawManOverboard(drift, manOverboard.lat, manOverboard.lng)
+    drawManOverboard(drift, manOverboard.lat, manOverboard.lng, reverse)
     if (!rescueEnv) return
     const points = predictDrift({
       lat: manOverboard.lat,
@@ -102,18 +104,21 @@ export function RescueLayer({ map }: { map: L.Map }) {
       wind: { speed: rescueEnv.windSpeed, dirDeg: rescueEnv.windDir },
       current: { speed: rescueEnv.currentSpeed, dirDeg: rescueEnv.currentDir },
       leewayFactor: driftLeeway,
-      // 落海可能是數小時前甚至一天前的事，預判到 24 小時。
-      hoursList: [1, 3, 6, 12, 24],
+      reverse,
+      // 落海可能是數小時前甚至數天前，預判/回推到 72 小時（3 天）。
+      hoursList: [1, 6, 12, 24, 48, 72],
     })
-    drawDrift(drift, manOverboard.lat, manOverboard.lng, points)
+    drawDrift(drift, manOverboard.lat, manOverboard.lng, points, reverse)
     setDriftPoints(points)
     setRescueStatus('done')
     const last = points[points.length - 1]
+    const when = reverse ? `${last.hours}h 前` : `${last.hours}h 後`
+    const verb = reverse ? '回推來源' : '漂流預判'
     setStatus(
-      `漂流預判：${last.hours}h 後約在 ${bearingToText(last.bearingDeg)}方 ${(last.driftMeters / 1852).toFixed(1)} 浬，搜索半徑 ${(last.radiusMeters / 1852).toFixed(1)} 浬`,
+      `${verb}：${when}約在 ${bearingToText(last.bearingDeg)}方 ${(last.driftMeters / 1852).toFixed(1)} 浬，範圍半徑 ${(last.radiusMeters / 1852).toFixed(1)} 浬`,
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, manOverboard, rescueEnv, driftLeeway])
+  }, [mode, manOverboard, rescueEnv, driftLeeway, reverse])
 
   // ── 時間軸 scrubber：拉桿到任意小時，畫出該時刻的漂流位置 ──
   useEffect(() => {
@@ -127,6 +132,8 @@ export function RescueLayer({ map }: { map: L.Map }) {
         lng: manOverboard.lng,
         wind: { speed: rescueEnv.windSpeed, dirDeg: rescueEnv.windDir },
         current: { speed: rescueEnv.currentSpeed, dirDeg: rescueEnv.currentDir },
+        leewayFactor: driftLeeway,
+        reverse,
         hoursList: [scrubHours],
       })
       L.circle([p.lat, p.lng], {
@@ -139,9 +146,9 @@ export function RescueLayer({ map }: { map: L.Map }) {
       L.marker([p.lat, p.lng], {
         icon: L.divIcon({
           className: '',
-          html: `<div class="scrub-label">${scrubHours.toFixed(1)}h</div>`,
-          iconSize: [40, 18],
-          iconAnchor: [20, 9],
+          html: `<div class="scrub-label">${scrubHours}h ${reverse ? '前' : '後'}</div>`,
+          iconSize: [46, 18],
+          iconAnchor: [23, 9],
         }),
         zIndexOffset: 1100,
       }).addTo(g)
@@ -149,7 +156,7 @@ export function RescueLayer({ map }: { map: L.Map }) {
     return () => {
       g.clearLayers()
     }
-  }, [mode, scrubHours, manOverboard, rescueEnv, map])
+  }, [mode, scrubHours, manOverboard, rescueEnv, driftLeeway, reverse, map])
 
   return null
 }
@@ -220,7 +227,7 @@ function drawEnvArrows(group: L.LayerGroup, e: MarineEnv) {
   drawArrow(group, e.lat, e.lng, windToward, 4000 + e.windSpeed * 900, '#22d3ee', true)
 }
 
-function drawManOverboard(group: L.LayerGroup, lat: number, lng: number) {
+function drawManOverboard(group: L.LayerGroup, lat: number, lng: number, reverse: boolean) {
   L.marker([lat, lng], {
     icon: L.divIcon({
       className: '',
@@ -230,7 +237,11 @@ function drawManOverboard(group: L.LayerGroup, lat: number, lng: number) {
     }),
     zIndexOffset: 1000,
   })
-    .bindPopup('<b style="color:#f43f5e">落海點 (最後已知位置)</b>')
+    .bindPopup(
+      reverse
+        ? '<b style="color:#f43f5e">發現/目擊位置 (回推來源)</b>'
+        : '<b style="color:#f43f5e">落海點 (最後已知位置)</b>',
+    )
     .addTo(group)
 }
 
@@ -239,8 +250,9 @@ function drawDrift(
   lat0: number,
   lng0: number,
   points: { hours: number; lat: number; lng: number; radiusMeters: number }[],
+  reverse: boolean,
 ) {
-  // 漂流軌跡線
+  // 漂流/回推軌跡線
   const line: [number, number][] = [[lat0, lng0], ...points.map((p) => [p.lat, p.lng] as [number, number])]
   L.polyline(line, { color: '#f43f5e', weight: 2, dashArray: '6 4' }).addTo(group)
 
@@ -255,13 +267,13 @@ function drawDrift(
       fillColor: '#f43f5e',
       fillOpacity: emphasis ? 0.12 : 0.06,
     }).addTo(group)
-    // 時間標籤
+    // 時間標籤（前/後）
     L.marker([p.lat, p.lng], {
       icon: L.divIcon({
         className: '',
-        html: `<div class="drift-label">${p.hours}h</div>`,
-        iconSize: [30, 18],
-        iconAnchor: [15, 9],
+        html: `<div class="drift-label">${p.hours}h${reverse ? '前' : ''}</div>`,
+        iconSize: [34, 18],
+        iconAnchor: [17, 9],
       }),
     }).addTo(group)
   })

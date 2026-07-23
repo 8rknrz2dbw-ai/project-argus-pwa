@@ -103,9 +103,24 @@ export function LayerControl({ map }: { map: L.Map }) {
       } as L.WMSOptions)
 
       let errorCount = 0
+      let fellBack = false
       wms.on('tileerror', () => {
         errorCount++
-        if (errorCount === 1) setStatus('⚠ 此區域/時間無可用影像，請調整日期或範圍')
+        // Sentinel 該區/時間沒圖：光學模式自動改用免費 NASA 影像（不讓使用者卡住）。
+        if (!fellBack && errorCount >= 2 && mode === 'optical') {
+          fellBack = true
+          removeTile()
+          mountGibs()
+          setStatus('Sentinel 該區/時間無影像，已自動改用免費 NASA 衛星影像')
+          return
+        }
+        if (errorCount === 1) {
+          setStatus(
+            mode === 'sar'
+              ? '⚠ 此區域/時間無可用雷達影像，請調整日期'
+              : '⚠ 此區域/時間無可用影像，請調整日期',
+          )
+        }
       })
       wms.on('load', () => {
         if (errorCount === 0) setStatus(mode === 'sar' ? '雷達影像載入完成' : '光學影像載入完成')

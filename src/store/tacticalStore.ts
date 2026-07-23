@@ -43,6 +43,8 @@ interface TacticalState {
   driftLeeway: number
   /** 目前選的漂流物體類型 id。 */
   driftTargetId: string
+  /** 漂流推演方向：forward=落海點往未來漂；backward=發現點回推來源。 */
+  driftMode: 'forward' | 'backward'
 
   // ── AIS 船舶識別 (ais) ──────────────────────────────
   vessels: Vessel[]
@@ -70,6 +72,7 @@ interface TacticalState {
   setScrubHours: (h: number) => void
   setDriftTarget: (id: string, leeway: number) => void
   setDriftPoints: (points: DriftPoint[]) => void
+  setDriftMode: (m: 'forward' | 'backward') => void
 }
 
 // 預設用「昨天」：衛星影像（GIBS/Sentinel）當天常還沒處理好，昨天最保險。
@@ -91,6 +94,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   scrubHours: 0,
   driftLeeway: 0.014,
   driftTargetId: 'piw',
+  driftMode: 'forward',
   vessels: [],
   ownPosition: null,
   statusMessage: '軌道預警模式待命中',
@@ -112,6 +116,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
       scrubHours: 0,
       driftLeeway: 0.014,
       driftTargetId: 'piw',
+      driftMode: 'forward',
       vessels: [],
       statusMessage: MODE_HINT[mode],
     })),
@@ -131,6 +136,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setScrubHours: (h) => set({ scrubHours: h }),
   setDriftTarget: (id, leeway) => set({ driftTargetId: id, driftLeeway: leeway }),
   setDriftPoints: (points) => set({ driftPoints: points }),
+  setDriftMode: (m) => set({ driftMode: m }),
 }))
 
 const MODE_HINT: Record<TacticalMode, string> = {

@@ -15,6 +15,9 @@ export function RescueControls() {
   const setScrubHours = useTacticalStore((s) => s.setScrubHours)
   const driftTargetId = useTacticalStore((s) => s.driftTargetId)
   const setDriftTarget = useTacticalStore((s) => s.setDriftTarget)
+  const driftMode = useTacticalStore((s) => s.driftMode)
+  const setDriftMode = useTacticalStore((s) => s.setDriftMode)
+  const reverse = driftMode === 'backward'
   const setMob = useTacticalStore((s) => s.setManOverboard)
   const setResult = useTacticalStore((s) => s.setRescueResult)
   const setStatus = useTacticalStore((s) => s.setStatus)
@@ -39,10 +42,39 @@ export function RescueControls() {
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-slate-700 bg-tactical-panel/90 p-3">
+      {/* 順推 / 逆推 切換 */}
+      <div className="grid grid-cols-2 gap-1 rounded-lg border border-slate-700 p-1">
+        <button
+          onClick={() => setDriftMode('forward')}
+          className={`rounded py-1.5 text-xs font-bold transition-all active:scale-95 ${
+            !reverse ? 'bg-tactical-alert/20 text-tactical-alert' : 'text-slate-400'
+          }`}
+        >
+          順推 · 落海→漂到哪
+        </button>
+        <button
+          onClick={() => setDriftMode('backward')}
+          className={`rounded py-1.5 text-xs font-bold transition-all active:scale-95 ${
+            reverse ? 'bg-amber-500/20 text-amber-400' : 'text-slate-400'
+          }`}
+        >
+          逆推 · 發現→從哪來
+        </button>
+      </div>
+
       {!mob && (
         <p className="text-xs leading-relaxed text-slate-300">
-          🆘 <b className="text-tactical-alert">點地圖上的落海位置</b>，系統會用風場＋洋流
-          預判漂流方向與搜索範圍。
+          {reverse ? (
+            <>
+              🔎 <b className="text-amber-400">點地圖上「發現漂流物 / 目擊」的位置</b>，
+              系統回推當初可能的落海來源與範圍。
+            </>
+          ) : (
+            <>
+              🆘 <b className="text-tactical-alert">點地圖上的落海位置</b>，系統用風場＋洋流
+              預判漂流方向與搜索範圍。
+            </>
+          )}
         </p>
       )}
 
@@ -88,10 +120,14 @@ export function RescueControls() {
       {status === 'loading' && <p className="text-xs text-tactical-cyan">計算漂流中…</p>}
       {status === 'done' && drift.length > 0 && (
         <div className="flex flex-col gap-1 rounded border border-rose-500/40 bg-rose-500/5 p-2">
-          <div className="mb-1 text-[11px] font-semibold text-tactical-alert">漂流預判（浬）</div>
+          <div className="mb-1 text-[11px] font-semibold text-tactical-alert">
+            {reverse ? '回推來源（浬）' : '漂流預判（浬）'}
+          </div>
           {drift.map((p) => (
             <div key={p.hours} className="flex justify-between font-mono text-[11px] text-slate-300">
-              <span className="text-tactical-alert">{p.hours}h 後</span>
+              <span className="text-tactical-alert">
+                {p.hours}h {reverse ? '前' : '後'}
+              </span>
               <span>
                 {bearingToText(p.bearingDeg)}方 {(p.driftMeters / 1852).toFixed(1)} 浬
               </span>
@@ -105,22 +141,24 @@ export function RescueControls() {
       {status === 'done' && drift.length > 0 && (
         <div>
           <div className="mb-1 flex items-center justify-between">
-            <label className="text-[11px] font-semibold text-amber-400">⏱ 時間軸（落海後經過）</label>
+            <label className="text-[11px] font-semibold text-amber-400">
+              ⏱ 時間軸（{reverse ? '往前回推' : '落海後經過'}）
+            </label>
             <span className="font-mono text-[11px] text-amber-400">
-              {scrubHours === 0 ? '關' : `${scrubHours} 小時後`}
+              {scrubHours === 0 ? '關' : `${scrubHours} 小時${reverse ? '前' : '後'}`}
             </span>
           </div>
           <input
             type="range"
             min={0}
-            max={24}
+            max={72}
             step={1}
             value={scrubHours}
             onChange={(e) => setScrubHours(Number(e.target.value))}
             className="w-full accent-amber-400"
           />
           <p className="mt-1 text-[10px] text-slate-500">
-            可拉到 24 小時（適用數小時前落海）。超過數小時為近似，風流會隨時間變化。
+            可拉到 72 小時（3 天）。超過數小時為近似，風流會隨時間變化。
           </p>
         </div>
       )}
@@ -128,7 +166,7 @@ export function RescueControls() {
       {/* 我的位置 → 落海點 距離 */}
       {distNm !== null && (
         <div className="flex items-center justify-between rounded border border-sky-500/40 bg-sky-500/5 px-2 py-1.5 text-[11px]">
-          <span className="text-sky-300">📍 我 → 落海點</span>
+          <span className="text-sky-300">📍 我 → {reverse ? '發現點' : '落海點'}</span>
           <span className="font-mono text-sky-200">{distNm.toFixed(1)} 浬</span>
         </div>
       )}
