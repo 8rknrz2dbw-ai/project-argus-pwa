@@ -12,6 +12,7 @@ import { LocateControl } from './LocateControl'
 import { OfflineControl } from './OfflineControl'
 import { TerritorialLayer, TerritorialToggle } from './TerritorialLayer'
 import { MapFlyTo } from './MapFlyTo'
+import { BrightSpotLayer } from './BrightSpotLayer'
 
 /**
  * MapContainer —— 唯一的地圖實體。
@@ -70,6 +71,7 @@ export function MapContainer() {
       {map && <TerritorialLayer map={map} />}
       {map && <TerritorialToggle />}
       {map && <MapFlyTo map={map} />}
+      {map && <BrightSpotLayer map={map} />}
     </div>
   )
 }

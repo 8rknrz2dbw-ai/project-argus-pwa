@@ -17,6 +17,10 @@ export function OpticalControls() {
   const own = useTacticalStore((s) => s.ownPosition)
   const setFlyTo = useTacticalStore((s) => s.setFlyTo)
   const setStatus = useTacticalStore((s) => s.setStatus)
+  const bumpScan = useTacticalStore((s) => s.bumpScan)
+  const scanSensitivity = useTacticalStore((s) => s.scanSensitivity)
+  const setScanSensitivity = useTacticalStore((s) => s.setScanSensitivity)
+  const brightSpots = useTacticalStore((s) => s.brightSpots)
   const today = new Date().toISOString().slice(0, 10)
   const hd = isSentinelConfigured()
 
@@ -139,6 +143,53 @@ export function OpticalControls() {
           onChange={(e) => setObservationDate(e.target.value)}
           className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1.5 font-mono text-sm text-slate-200"
         />
+      </div>
+
+      {/* 亮點掃描：在暗海上標選疑似船/物體 */}
+      <div className="rounded-lg border border-tactical-cyan/40 bg-tactical-cyan/5 p-2">
+        <button
+          onClick={bumpScan}
+          className="w-full rounded-lg border border-tactical-cyan bg-tactical-cyan/15 py-2 text-sm font-bold text-tactical-cyan active:scale-95"
+        >
+          🔍 掃描畫面找疑似亮點{brightSpots.length ? `（${brightSpots.length}）` : ''}
+        </button>
+        <div className="mt-2 flex items-center gap-2">
+          <span className="shrink-0 text-[11px] text-slate-400">靈敏度</span>
+          <input
+            type="range"
+            min={2}
+            max={4.5}
+            step={0.1}
+            value={scanSensitivity}
+            // 拉桿右=更敏感（門檻低），故反向
+            onChange={(e) => setScanSensitivity(6.5 - Number(e.target.value))}
+            className="w-full accent-cyan-400"
+          />
+          <span className="shrink-0 font-mono text-[10px] text-slate-500">
+            {scanSensitivity <= 2.6 ? '高' : scanSensitivity >= 3.6 ? '低' : '中'}
+          </span>
+        </div>
+        {brightSpots.length > 0 && (
+          <div className="mt-2 flex max-h-28 flex-col gap-0.5 overflow-y-auto">
+            {brightSpots.slice(0, 12).map((s, i) => (
+              <button
+                key={i}
+                onClick={() => setFlyTo({ lat: s.lat, lng: s.lng, zoom: 14 })}
+                className="flex items-center justify-between rounded border border-slate-700 bg-slate-800/60 px-2 py-1 text-left active:scale-95"
+              >
+                <span className="font-mono text-[11px] text-tactical-cyan">#{i + 1}</span>
+                <span className="font-mono text-[10px] text-slate-300">
+                  {s.lat.toFixed(3)}, {s.lng.toFixed(3)}
+                </span>
+                <span className="font-mono text-[10px] text-slate-500">{s.score.toFixed(1)}σ</span>
+              </button>
+            ))}
+          </div>
+        )}
+        <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
+          分析目前畫面：把暗海上突出的小亮點標成編號記號。放大到目標海域、選清晰來源（高解析/無雲）效果最好。
+          <b className="text-slate-400">輔助判讀</b>——白浪、反光也可能中，確認靠雷達或就近目視。
+        </p>
       </div>
 
       {/* 以查詢座標（或我的位置）為中心，鎖定觀測日期開免費衛星檔案 */}
