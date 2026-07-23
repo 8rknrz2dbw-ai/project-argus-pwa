@@ -72,7 +72,8 @@ interface TacticalState {
   setDriftPoints: (points: DriftPoint[]) => void
 }
 
-const today = new Date().toISOString().slice(0, 10)
+// 預設用「昨天」：衛星影像（GIBS/Sentinel）當天常還沒處理好，昨天最保險。
+const today = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
 
 export const useTacticalStore = create<TacticalState>((set) => ({
   mode: 'orbit',
