@@ -208,19 +208,20 @@ body,
   animation: pulse-alert 1s ease-in-out infinite;
 }
 
-/* 亮點掃描記號（青色編號脈動圈） */
-.bright-spot {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 2px solid #22d3ee;
-  background: rgba(34, 211, 238, 0.18);
-  color: #a5f3fc;
-  font: 700 11px ui-monospace, monospace;
-  text-align: center;
-  line-height: 18px;
-  box-shadow: 0 0 8px #22d3ee;
-  animation: pulse-alert 1.4s ease-in-out infinite;
+/* 偵測目標標籤（框角編號 + AIS 標記） */
+.det-label {
+  display: inline-block;
+  padding: 0 4px;
+  border: 1px solid;
+  border-radius: 4px;
+  background: rgba(2, 6, 23, 0.85);
+  font: 700 10px ui-monospace, monospace;
+  line-height: 13px;
+  white-space: nowrap;
+}
+/* 無 AIS 的可疑目標框：脈動 */
+.det-box-alert {
+  animation: pulse-alert 1.1s ease-in-out infinite;
 }
 
 /* 颱風眼旋轉符號 */

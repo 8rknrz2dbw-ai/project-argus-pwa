@@ -3,6 +3,7 @@ import { useTacticalStore } from '../store/tacticalStore'
 import { isSentinelConfigured } from '../lib/sentinel'
 import { SatelliteQuickLinks } from './SatelliteQuickLinks'
 import { parseCoord } from '../lib/coordParse'
+import { shareReport } from '../lib/report'
 
 /**
  * 光學模式的控制項：影像來源提示 + 雲量滑桿 + 歷史觀測日期。
@@ -43,6 +44,18 @@ export function OpticalControls() {
     }
   }
   const linkCenter = queried ?? own ?? undefined
+
+  const exportDetections = async () => {
+    if (brightSpots.length === 0) return
+    const lines = [`【阿爾戈斯 目標掃描清單】共 ${brightSpots.length} 個`]
+    brightSpots.forEach((s, i) => {
+      const tag = s.ais === 'none' ? '⚠無AIS' : s.ais === 'known' ? `✓已知(${s.aisName || 'AIS'})` : ''
+      lines.push(`#${i + 1} ${tag} ${s.cls}｜~${Math.round(s.sizeM)}m｜${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}`)
+    })
+    lines.push('※ 亮點輔助分流，非確認身分；請並用雷達/目視。')
+    const how = await shareReport(lines.join('\n'))
+    setStatus(how === 'shared' ? '目標清單已分享' : how === 'copied' ? '目標清單已複製' : '⚠ 分享失敗')
+  }
 
   const SRC_INFO: Record<string, string> = {
     esri: '高解析空拍鑲嵌 · 岸際/島礁最銳利（可放大到 ~z19，非每日、非即時）',
@@ -154,7 +167,7 @@ export function OpticalControls() {
           onClick={bumpScan}
           className="w-full rounded-lg border border-tactical-cyan bg-tactical-cyan/15 py-2 text-sm font-bold text-tactical-cyan active:scale-95"
         >
-          🔍 掃描畫面找疑似亮點{brightSpots.length ? `（${brightSpots.length}）` : ''}
+          🔍 掃描並標注目標{brightSpots.length ? `（${brightSpots.length}）` : ''}
         </button>
         <div className="mt-2 flex items-center gap-2">
           <span className="shrink-0 text-[11px] text-slate-400">靈敏度</span>
@@ -173,25 +186,42 @@ export function OpticalControls() {
           </span>
         </div>
         {brightSpots.length > 0 && (
-          <div className="mt-2 flex max-h-28 flex-col gap-0.5 overflow-y-auto">
-            {brightSpots.slice(0, 12).map((s, i) => (
-              <button
-                key={i}
-                onClick={() => gotoCoord(s.lat, s.lng, 14)}
-                className="flex items-center justify-between rounded border border-slate-700 bg-slate-800/60 px-2 py-1 text-left active:scale-95"
-              >
-                <span className="font-mono text-[11px] text-tactical-cyan">#{i + 1}</span>
-                <span className="font-mono text-[10px] text-slate-300">
-                  {s.lat.toFixed(3)}, {s.lng.toFixed(3)}
-                </span>
-                <span className="font-mono text-[10px] text-slate-500">{s.score.toFixed(1)}σ</span>
+          <>
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-[10px] text-slate-400">
+                共 {brightSpots.length} 目標
+                {brightSpots.some((s) => s.ais === 'none') &&
+                  `，⚠${brightSpots.filter((s) => s.ais === 'none').length} 無AIS`}
+              </span>
+              <button onClick={exportDetections} className="text-[10px] text-tactical-green active:scale-95">
+                📤 匯出目標清單
               </button>
-            ))}
-          </div>
+            </div>
+            <div className="mt-1 flex max-h-32 flex-col gap-0.5 overflow-y-auto">
+              {brightSpots.slice(0, 16).map((s, i) => {
+                const col =
+                  s.ais === 'none' ? 'text-tactical-alert' : s.ais === 'known' ? 'text-tactical-green' : 'text-tactical-cyan'
+                return (
+                  <button
+                    key={i}
+                    onClick={() => gotoCoord(s.lat, s.lng, 14)}
+                    className="flex items-center gap-2 rounded border border-slate-700 bg-slate-800/60 px-2 py-1 text-left active:scale-95"
+                  >
+                    <span className={`font-mono text-[11px] font-bold ${col}`}>#{i + 1}</span>
+                    <span className="flex-1 truncate text-[10px] text-slate-300">
+                      {s.ais === 'none' ? '⚠無AIS' : s.ais === 'known' ? `✓${s.aisName || 'AIS'}` : ''} {s.cls}
+                    </span>
+                    <span className="shrink-0 font-mono text-[9px] text-slate-500">~{Math.round(s.sizeM)}m</span>
+                  </button>
+                )
+              })}
+            </div>
+          </>
         )}
         <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
-          分析目前畫面：把暗海上突出的小亮點標成編號記號。放大到目標海域、選清晰來源（高解析/無雲）效果最好。
-          <b className="text-slate-400">輔助判讀</b>——白浪、反光也可能中，確認靠雷達或就近目視。
+          分析目前畫面：把暗海上突出目標畫框標注、估尺度分類，並與 AIS 比對——
+          <b className="text-tactical-alert">紅框=無AIS訊號(可疑優先查)</b>、綠框=已知AIS。
+          <b className="text-slate-400">輔助分流</b>，非確認身分；白浪/反光也可能中。
         </p>
       </div>
 

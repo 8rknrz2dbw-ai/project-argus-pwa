@@ -4,6 +4,7 @@ import type { DriftPoint } from '../lib/drift'
 import type { MarineEnv } from '../lib/marineEnv'
 import type { HourlySeries } from '../lib/marineSeries'
 import type { Vessel } from '../lib/ais'
+import type { Detection } from '../lib/detection'
 import type { TideEvent, SeaAreaForecast } from '../lib/cwaMarine'
 import {
   loadSaved,
@@ -37,8 +38,8 @@ interface TacticalState {
   scanTick: number
   /** 掃描靈敏度（門檻 kStd，越小越敏感）。 */
   scanSensitivity: number
-  /** 掃描到的疑似亮點（畫面→經緯度）。 */
-  brightSpots: { lat: number; lng: number; score: number }[]
+  /** 掃描到的疑似目標（含框、分類、AIS 比對）。 */
+  brightSpots: Detection[]
 
   // ── AI 分析結果 ─────────────────────────────────────
   detections: DetectionCollection | null
@@ -130,7 +131,7 @@ interface TacticalState {
   setOpticalSource: (s: 'nasa' | 'esri' | 'eox') => void
   bumpScan: () => void
   setScanSensitivity: (v: number) => void
-  setBrightSpots: (s: { lat: number; lng: number; score: number }[]) => void
+  setBrightSpots: (s: Detection[]) => void
   setDetections: (d: DetectionCollection | null) => void
   setAiStatus: (s: TacticalState['aiStatus'], error?: string | null) => void
   setSelecting: (v: boolean) => void
@@ -241,7 +242,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
       mcSummary: null,
       showSearchPattern: false,
       trackSpacingNm: 1,
-      vessels: [],
+      // 注意：vessels 不清空——保留最後已知 AIS，供光學亮點掃描做「無AIS=可疑」比對。
       brightSpots: [],
       cwaTide: null,
       cwaSeaAreas: null,
