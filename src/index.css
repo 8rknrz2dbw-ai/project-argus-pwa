@@ -44,6 +44,17 @@ body,
   top: calc(0.5rem + env(safe-area-inset-top) + 12.4rem);
   right: calc(0.75rem + env(safe-area-inset-right));
 }
+/* 座標管理按鈕，再下一格 */
+.safe-float-top5 {
+  top: calc(0.5rem + env(safe-area-inset-top) + 15.8rem);
+  right: calc(0.75rem + env(safe-area-inset-right));
+}
+/* 釘選座標記號 */
+.pin-marker {
+  font-size: 22px;
+  line-height: 24px;
+  filter: drop-shadow(0 0 4px rgba(244, 114, 182, 0.8));
+}
 
 /* 深色底圖已改用 CARTO dark_matter，這裡只做輕微微調＋雷達幕氛圍 */
 .base-tiles-tactical {

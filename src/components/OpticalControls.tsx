@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTacticalStore } from '../store/tacticalStore'
 import { isSentinelConfigured } from '../lib/sentinel'
 import { SatelliteQuickLinks } from './SatelliteQuickLinks'
+import { parseCoord } from '../lib/coordParse'
 
 /**
  * 光學模式的控制項：影像來源提示 + 雲量滑桿 + 歷史觀測日期。
@@ -15,7 +16,7 @@ export function OpticalControls() {
   const opticalSource = useTacticalStore((s) => s.opticalSource)
   const setOpticalSource = useTacticalStore((s) => s.setOpticalSource)
   const own = useTacticalStore((s) => s.ownPosition)
-  const setFlyTo = useTacticalStore((s) => s.setFlyTo)
+  const gotoCoord = useTacticalStore((s) => s.gotoCoord)
   const setStatus = useTacticalStore((s) => s.setStatus)
   const bumpScan = useTacticalStore((s) => s.bumpScan)
   const scanSensitivity = useTacticalStore((s) => s.scanSensitivity)
@@ -24,19 +25,21 @@ export function OpticalControls() {
   const today = new Date().toISOString().slice(0, 10)
   const hd = isSentinelConfigured()
 
-  // 座標查詢：輸入經緯度 → 地圖飛過去 + 影像連結以此為中心
+  // 座標查詢：輸入經緯度（可貼萬用格式）→ 地圖飛過去 + 影像連結以此為中心
   const [qLat, setQLat] = useState('')
   const [qLng, setQLng] = useState('')
+  // 先試萬用解析（可把整串座標貼在緯度欄），失敗再退回兩欄十進位。
   const queried =
-    Number.isFinite(parseFloat(qLat)) && Number.isFinite(parseFloat(qLng))
+    parseCoord(`${qLat} ${qLng}`.trim()) ??
+    (Number.isFinite(parseFloat(qLat)) && Number.isFinite(parseFloat(qLng))
       ? { lat: parseFloat(qLat), lng: parseFloat(qLng) }
-      : null
+      : null)
   const goToCoord = () => {
     if (queried && Math.abs(queried.lat) <= 90 && Math.abs(queried.lng) <= 180) {
-      setFlyTo({ lat: queried.lat, lng: queried.lng, zoom: 11 })
+      gotoCoord(queried.lat, queried.lng, 11)
       setStatus(`已跳到 ${queried.lat.toFixed(3)}, ${queried.lng.toFixed(3)}｜選日期看當時影像`)
     } else {
-      setStatus('⚠ 座標格式錯誤（緯度 -90~90、經度 -180~180）')
+      setStatus('⚠ 座標格式錯誤（可用十進位/度分/度分秒，或用 📌 座標管理貼萬用格式）')
     }
   }
   const linkCenter = queried ?? own ?? undefined
@@ -174,7 +177,7 @@ export function OpticalControls() {
             {brightSpots.slice(0, 12).map((s, i) => (
               <button
                 key={i}
-                onClick={() => setFlyTo({ lat: s.lat, lng: s.lng, zoom: 14 })}
+                onClick={() => gotoCoord(s.lat, s.lng, 14)}
                 className="flex items-center justify-between rounded border border-slate-700 bg-slate-800/60 px-2 py-1 text-left active:scale-95"
               >
                 <span className="font-mono text-[11px] text-tactical-cyan">#{i + 1}</span>

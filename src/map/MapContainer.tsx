@@ -13,6 +13,7 @@ import { OfflineControl } from './OfflineControl'
 import { TerritorialLayer, TerritorialToggle } from './TerritorialLayer'
 import { MapFlyTo } from './MapFlyTo'
 import { BrightSpotLayer } from './BrightSpotLayer'
+import { SavedCoordsLayer } from './SavedCoordsLayer'
 
 /**
  * MapContainer —— 唯一的地圖實體。
@@ -72,6 +73,7 @@ export function MapContainer() {
       {map && <TerritorialToggle />}
       {map && <MapFlyTo map={map} />}
       {map && <BrightSpotLayer map={map} />}
+      {map && <SavedCoordsLayer map={map} />}
     </div>
   )
 }

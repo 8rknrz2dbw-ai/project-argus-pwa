@@ -5,6 +5,16 @@ import type { MarineEnv } from '../lib/marineEnv'
 import type { HourlySeries } from '../lib/marineSeries'
 import type { Vessel } from '../lib/ais'
 import type { TideEvent, SeaAreaForecast } from '../lib/cwaMarine'
+import {
+  loadSaved,
+  persistSaved,
+  loadHistory,
+  persistHistory,
+  pushHistory,
+  newId,
+  type SavedCoord,
+  type HistItem,
+} from '../lib/savedCoords'
 
 /**
  * 全域戰術狀態 —— 整個 App 唯一的「真相來源 (single source of truth)」。
@@ -99,6 +109,10 @@ interface TacticalState {
   // ── 地圖飛行目標（座標查詢用，設定後地圖飛過去再清空）────
   flyToTarget: { lat: number; lng: number; zoom?: number } | null
 
+  // ── 座標管理：已存(最愛/釘選) + 歷史（localStorage 持久化）──
+  savedCoords: SavedCoord[]
+  coordHistory: HistItem[]
+
   // ── 我的位置 (GPS，跨模式保留) ──────────────────────
   ownPosition: { lat: number; lng: number; accuracy: number } | null
 
@@ -124,6 +138,13 @@ interface TacticalState {
   setVessels: (v: Vessel[]) => void
   setOwnPosition: (p: TacticalState['ownPosition']) => void
   setFlyTo: (t: { lat: number; lng: number; zoom?: number } | null) => void
+  /** 跳到座標並記錄歷史（座標查詢/清單點擊共用）。 */
+  gotoCoord: (lat: number, lng: number, zoom?: number) => void
+  /** 新增一筆已存座標（釘選或最愛）。 */
+  addSavedCoord: (c: { lat: number; lng: number; label?: string; pinned?: boolean; favorite?: boolean }) => void
+  updateSavedCoord: (id: string, patch: Partial<SavedCoord>) => void
+  removeSavedCoord: (id: string) => void
+  clearHistory: () => void
   setShowTerritorial: (v: boolean) => void
   setSeaStateField: (f: 'sst' | 'wave') => void
   setCwaTide: (t: TideEvent[] | null) => void
@@ -181,6 +202,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   animPlaying: false,
   animTimes: [],
   flyToTarget: null,
+  savedCoords: loadSaved(),
+  coordHistory: loadHistory(),
   ownPosition: null,
   showTerritorial: false,
   statusMessage: '軌道預警模式待命中',
@@ -235,6 +258,45 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setVessels: (v) => set({ vessels: v }),
   setOwnPosition: (p) => set({ ownPosition: p }),
   setFlyTo: (t) => set({ flyToTarget: t }),
+  gotoCoord: (lat, lng, zoom) =>
+    set((st) => {
+      const coordHistory = pushHistory(st.coordHistory, lat, lng, Date.now())
+      persistHistory(coordHistory)
+      return { flyToTarget: { lat, lng, zoom: zoom ?? 12 }, coordHistory }
+    }),
+  addSavedCoord: (c) =>
+    set((st) => {
+      const now = Date.now()
+      const item: SavedCoord = {
+        id: newId(now),
+        lat: c.lat,
+        lng: c.lng,
+        label: c.label?.trim() || defaultLabel(st.savedCoords.length + 1),
+        favorite: c.favorite ?? false,
+        pinned: c.pinned ?? false,
+        createdAt: now,
+      }
+      const savedCoords = [item, ...st.savedCoords]
+      persistSaved(savedCoords)
+      return { savedCoords }
+    }),
+  updateSavedCoord: (id, patch) =>
+    set((st) => {
+      const savedCoords = st.savedCoords.map((c) => (c.id === id ? { ...c, ...patch } : c))
+      persistSaved(savedCoords)
+      return { savedCoords }
+    }),
+  removeSavedCoord: (id) =>
+    set((st) => {
+      const savedCoords = st.savedCoords.filter((c) => c.id !== id)
+      persistSaved(savedCoords)
+      return { savedCoords }
+    }),
+  clearHistory: () =>
+    set(() => {
+      persistHistory([])
+      return { coordHistory: [] }
+    }),
   setShowTerritorial: (v) => set({ showTerritorial: v }),
   setSeaStateField: (f) => set({ seaStateField: f }),
   setCwaTide: (t) => set({ cwaTide: t }),
@@ -253,6 +315,10 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setShowSearchPattern: (v) => set({ showSearchPattern: v }),
   setTrackSpacingNm: (nm) => set({ trackSpacingNm: nm }),
 }))
+
+function defaultLabel(n: number): string {
+  return `座標 ${n}`
+}
 
 const MODE_HINT: Record<TacticalMode, string> = {
   orbit: '軌道預警模式：即時軌跡渲染中',

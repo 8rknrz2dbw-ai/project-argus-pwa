@@ -3,6 +3,7 @@ import { useTacticalStore } from '../store/tacticalStore'
 import { bearingToText, DRIFT_TARGETS } from '../lib/drift'
 import { buildReport, shareReport } from '../lib/report'
 import { SatelliteQuickLinks } from './SatelliteQuickLinks'
+import { parseCoord } from '../lib/coordParse'
 
 /**
  * 搜救推演控制面板：顯示即時海象摘要 + 漂流結果，並提示操作。
@@ -42,13 +43,17 @@ export function RescueControls() {
   const [latStr, setLatStr] = useState('')
   const [lngStr, setLngStr] = useState('')
   const placeByCoord = () => {
-    const lat = parseFloat(latStr)
-    const lng = parseFloat(lngStr)
-    if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
-      setMob({ lat, lng })
+    // 先試萬用解析（可把整串座標貼在緯度欄），失敗再退回兩欄十進位。
+    const p =
+      parseCoord(`${latStr} ${lngStr}`.trim()) ??
+      (Number.isFinite(parseFloat(latStr)) && Number.isFinite(parseFloat(lngStr))
+        ? { lat: parseFloat(latStr), lng: parseFloat(lngStr) }
+        : null)
+    if (p && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180) {
+      setMob({ lat: p.lat, lng: p.lng })
       setManual(false)
     } else {
-      setStatus('⚠ 座標格式錯誤（緯度 -90~90、經度 -180~180）')
+      setStatus('⚠ 座標格式錯誤（可用十進位/度分/度分秒；或用 📌 座標管理）')
     }
   }
 
