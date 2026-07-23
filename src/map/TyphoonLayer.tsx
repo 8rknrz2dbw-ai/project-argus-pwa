@@ -2,10 +2,13 @@ import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import { useTacticalStore } from '../store/tacticalStore'
 import { demoTyphoon, currentPoint, type Typhoon } from '../lib/typhoon'
+import { isCwaConfigured } from '../lib/config'
+import { fetchCwaTyphoon } from '../lib/cwa'
 
 /**
  * 颱風路徑圖層：現在位置（旋轉符號）+ 暴風圈 + 預報路徑 + 潛勢範圍錐 + 時間點。
- * 目前為示範颱風（無免金鑰即時來源）；真實 feed 可經 Worker 代理後餵入。
+ * 有設定 CWA 授權碼＋Worker → 抓中央氣象署『颱風路徑潛勢預報』真實資料；
+ * 否則用示範颱風。無颱風期間 CWA 會回空 → 亦退回示範以展示能力。
  */
 export function TyphoonLayer({ map }: { map: L.Map }) {
   const mode = useTacticalStore((s) => s.mode)
@@ -16,14 +19,36 @@ export function TyphoonLayer({ map }: { map: L.Map }) {
     if (mode !== 'typhoon') return
     const group = L.layerGroup().addTo(map)
     groupRef.current = group
-    const ty = demoTyphoon()
-    draw(group, ty)
-    // 移動地圖到颱風附近
-    const cur = currentPoint(ty)
-    map.setView([cur.lat + 1.5, cur.lng - 1.5], 6)
-    setStatus('颱風路徑（示範）：紅=暴風圈、虛線=預報路徑、錐形=潛勢範圍')
+    let cancelled = false
+
+    const render = (ty: Typhoon) => {
+      if (cancelled || !groupRef.current) return
+      group.clearLayers()
+      draw(group, ty)
+      const cur = currentPoint(ty)
+      map.setView([cur.lat + 1.5, cur.lng - 1.5], 6)
+      setStatus(
+        ty.demo
+          ? '颱風路徑（示範）：紅=暴風圈、虛線=預報路徑、錐形=潛勢範圍'
+          : `颱風路徑（CWA 即時）：${ty.name}｜紅=暴風圈、虛線=預報路徑`,
+      )
+    }
+
+    // 先畫示範，確保立即有畫面；有 CWA 設定則嘗試以真實資料覆蓋。
+    render(demoTyphoon())
+    if (isCwaConfigured()) {
+      setStatus('颱風路徑：讀取中央氣象署即時資料…')
+      fetchCwaTyphoon(Date.now())
+        .then((ty) => {
+          if (ty) render(ty)
+          else if (!cancelled)
+            setStatus('CWA 目前無颱風或資料格式不符，顯示示範颱風')
+        })
+        .catch(() => {})
+    }
 
     return () => {
+      cancelled = true
       group.clearLayers()
       map.removeLayer(group)
       groupRef.current = null
