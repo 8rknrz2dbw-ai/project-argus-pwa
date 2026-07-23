@@ -119,7 +119,10 @@ export const DRIFT_TARGETS: DriftTarget[] = [
   { id: 'piw', label: '落海人', leeway: 0.014, icon: '🏊' },
   { id: 'lifejacket', label: '救生衣浮者', leeway: 0.02, icon: '🦺' },
   { id: 'liferaft', label: '救生筏', leeway: 0.03, icon: '🛟' },
-  { id: 'boat', label: '小船/膠筏', leeway: 0.05, icon: '🚤' },
+  // 台灣本土化：舢舨、管筏（塑膠管漁筏）受風面積較大，偏航較高
+  { id: 'sampan', label: '舢舨', leeway: 0.04, icon: '🛶' },
+  { id: 'raft', label: '管筏', leeway: 0.045, icon: '🧑‍🌾' },
+  { id: 'boat', label: '小船', leeway: 0.05, icon: '🚤' },
 ]
 
 /** 把方向度數轉成 8 方位中文，給 UI 顯示用。 */

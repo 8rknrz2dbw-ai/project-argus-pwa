@@ -7,25 +7,36 @@ export interface ReportInput {
   mob: { lat: number; lng: number }
   env: MarineEnv
   drift: DriftPoint[]
+  reverse?: boolean
+  targetLabel?: string
+  /** 蒙地卡羅摘要（可選）。 */
+  mc?: { peak: { lat: number; lng: number } | null; radius95: number } | null
 }
 
 /** 產生純文字搜救報告（給隊友、可貼進通訊軟體）。 */
-export function buildReport({ mob, env, drift }: ReportInput): string {
+export function buildReport({ mob, env, drift, reverse, targetLabel, mc }: ReportInput): string {
   const lines: string[] = []
-  lines.push('【ARGUS 搜救漂流預判報告】')
-  lines.push(`落海點：${fmtCoord(mob.lat, mob.lng)}`)
+  lines.push('【阿爾戈斯 搜救漂流預判報告】')
+  if (targetLabel) lines.push(`漂流物體：${targetLabel}`)
+  lines.push(`推演方向：${reverse ? '逆推（回推來源）' : '順推（往未來漂）'}`)
+  lines.push(`${reverse ? '發現/目擊點' : '落海點'}：${fmtCoord(mob.lat, mob.lng)}`)
   lines.push(
     `海象：風 ${env.windSpeed.toFixed(1)} m/s 來自${bearingToText(env.windDir)}、` +
       `洋流 ${env.currentSpeed.toFixed(2)} m/s 往${bearingToText(env.currentDir)}、` +
       `浪高 ${env.waveHeight.toFixed(1)} m${env.live ? '' : '（離線預設值）'}`,
   )
-  lines.push('漂流預判：')
+  lines.push(reverse ? '回推來源：' : '漂流預判：')
   for (const p of drift) {
     lines.push(
-      `  ${p.hours}h 後 → ${fmtCoord(p.lat, p.lng)}｜` +
+      `  ${p.hours}h ${reverse ? '前' : '後'} → ${fmtCoord(p.lat, p.lng)}｜` +
         `${bearingToText(p.bearingDeg)}方 ${(p.driftMeters / 1852).toFixed(1)} 浬｜` +
-        `建議搜索半徑 ${(p.radiusMeters / 1852).toFixed(1)} 浬`,
+        `半徑 ${(p.radiusMeters / 1852).toFixed(1)} 浬`,
     )
+  }
+  if (mc && mc.peak) {
+    lines.push('蒙地卡羅機率搜索（1200 粒子）：')
+    lines.push(`  最高機率位置：${fmtCoord(mc.peak.lat, mc.peak.lng)}`)
+    lines.push(`  95% 搜索範圍半徑：${(mc.radius95 / 1852).toFixed(1)} 浬`)
   }
   lines.push('※ 近似模型供快速決策參考，請並用官方 SAROPS 與現場判斷。')
   return lines.join('\n')

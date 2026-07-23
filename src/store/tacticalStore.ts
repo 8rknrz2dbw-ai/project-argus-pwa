@@ -47,6 +47,16 @@ interface TacticalState {
   driftMode: 'forward' | 'backward'
   /** 是否顯示蒙地卡羅機率密度圖 (SAROPS 式)。 */
   showProbability: boolean
+  /** 蒙地卡羅結果摘要（峰值/質心/95% 半徑 m），供搜索航線與報告使用。 */
+  mcSummary: {
+    peak: { lat: number; lng: number } | null
+    centroid: { lat: number; lng: number } | null
+    radius95: number
+  } | null
+  /** 是否顯示平行梳掃搜索航線。 */
+  showSearchPattern: boolean
+  /** 航線間距（海浬）＝有效搜索寬度。 */
+  trackSpacingNm: number
 
   // ── AIS 船舶識別 (ais) ──────────────────────────────
   vessels: Vessel[]
@@ -81,6 +91,9 @@ interface TacticalState {
   setDriftPoints: (points: DriftPoint[]) => void
   setDriftMode: (m: 'forward' | 'backward') => void
   setShowProbability: (v: boolean) => void
+  setMcSummary: (s: TacticalState['mcSummary']) => void
+  setShowSearchPattern: (v: boolean) => void
+  setTrackSpacingNm: (nm: number) => void
 }
 
 // 預設用「昨天」：衛星影像（GIBS/Sentinel）當天常還沒處理好，昨天最保險。
@@ -104,6 +117,9 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   driftTargetId: 'piw',
   driftMode: 'forward',
   showProbability: false,
+  mcSummary: null,
+  showSearchPattern: false,
+  trackSpacingNm: 1,
   vessels: [],
   seaStateField: 'sst',
   ownPosition: null,
@@ -128,6 +144,9 @@ export const useTacticalStore = create<TacticalState>((set) => ({
       driftTargetId: 'piw',
       driftMode: 'forward',
       showProbability: false,
+      mcSummary: null,
+      showSearchPattern: false,
+      trackSpacingNm: 1,
       vessels: [],
       statusMessage: MODE_HINT[mode],
     })),
@@ -150,6 +169,9 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setDriftPoints: (points) => set({ driftPoints: points }),
   setDriftMode: (m) => set({ driftMode: m }),
   setShowProbability: (v) => set({ showProbability: v }),
+  setMcSummary: (s) => set({ mcSummary: s }),
+  setShowSearchPattern: (v) => set({ showSearchPattern: v }),
+  setTrackSpacingNm: (nm) => set({ trackSpacingNm: nm }),
 }))
 
 const MODE_HINT: Record<TacticalMode, string> = {
