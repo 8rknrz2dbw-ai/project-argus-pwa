@@ -74,10 +74,10 @@ export function OpticalControls() {
         )}
       </div>
 
-      {/* 座標查詢：輸入座標跳過去，配合下方日期看「當時影像」*/}
-      <div className="rounded-lg border border-tactical-cyan/30 bg-tactical-cyan/5 p-2">
+      {/* 「看特定日期那艘船」：座標 + 日期合成一區，地圖直接換成該日影像 */}
+      <div className="rounded-lg border border-tactical-cyan/40 bg-tactical-cyan/5 p-2">
         <div className="mb-1 text-[11px] font-semibold text-tactical-cyan">
-          📍 座標 + 日期查詢當時影像
+          🔎 看「案發當時那艘船」：① 座標 ② 日期
         </div>
         <div className="flex items-center gap-1">
           <input
@@ -98,12 +98,23 @@ export function OpticalControls() {
             onClick={goToCoord}
             className="shrink-0 rounded border border-tactical-cyan bg-tactical-cyan/10 px-2 py-1.5 text-xs font-bold text-tactical-cyan active:scale-95"
           >
-            跳過去
+            ① 跳過去
           </button>
         </div>
-        <p className="mt-1 text-[10px] text-slate-500">
-          輸入座標→跳到該點；再選下方<b className="text-slate-400">觀測日期</b>＝App 內看當日 MODIS，
-          下方衛星連結則鎖定該日的 Sentinel（10m）。
+        <label className="mb-1 mt-2 block text-[11px] font-semibold text-tactical-green">
+          📅 ② 觀測日期（要看哪一天）
+        </label>
+        <input
+          type="date"
+          max={today}
+          value={observationDate}
+          onChange={(e) => setObservationDate(e.target.value)}
+          className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1.5 font-mono text-sm text-slate-200"
+        />
+        <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
+          {hd
+            ? '✅ 有 Sentinel 金鑰：地圖直接換成該日 Sentinel-2（10m）影像——這就是「當時那艘船」的畫面。看到船後按下方 🔍 掃描自動框。'
+            : '免金鑰：地圖顯示該日 MODIS（250m，只看得到大船/船隊）。要 10m 全解析，貼 Sentinel 金鑰，或用本頁最下方「外部全解析衛星」連結。'}
         </p>
       </div>
 
@@ -148,19 +159,6 @@ export function OpticalControls() {
         <p className="mt-1 text-[10px] text-slate-500">
           {hd ? '交給 ESA 伺服器過濾（MAXCC 參數）' : '雲量過濾需 Sentinel 金鑰；NASA 免費影像為每日合成'}
         </p>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-xs font-semibold text-tactical-green">
-          📅 觀測日期
-        </label>
-        <input
-          type="date"
-          max={today}
-          value={observationDate}
-          onChange={(e) => setObservationDate(e.target.value)}
-          className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1.5 font-mono text-sm text-slate-200"
-        />
       </div>
 
       {/* 亮點掃描：在暗海上標選疑似船/物體 */}
@@ -232,7 +230,7 @@ export function OpticalControls() {
         lat={linkCenter?.lat}
         lng={linkCenter?.lng}
         date={observationDate}
-        title={`🛰️ ${observationDate} 當日影像（雷達/高解析檔案）`}
+        title={`🛰️ 外部全解析衛星檔案（${observationDate} · Sentinel 雷達/光學）`}
       />
     </div>
   )
