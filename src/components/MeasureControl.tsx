@@ -9,6 +9,7 @@ export function MeasureControl() {
   const points = useTacticalStore((s) => s.measurePoints)
   const toggle = useTacticalStore((s) => s.toggleMeasure)
   const clear = useTacticalStore((s) => s.clearMeasure)
+  const toolsExpanded = useTacticalStore((s) => s.toolsExpanded)
 
   let total = 0
   for (let i = 1; i < points.length; i++) {
@@ -26,18 +27,20 @@ export function MeasureControl() {
 
   return (
     <>
-      <button
-        onClick={toggle}
-        className={`safe-float-top6 pointer-events-auto absolute z-[1100] flex h-11 w-11 items-center justify-center rounded-full border text-lg active:scale-95 ${
-          measuring
-            ? 'border-tactical-cyan bg-tactical-cyan/20 text-tactical-cyan'
-            : 'border-slate-600 bg-tactical-panel/90'
-        }`}
-        aria-label="量測距離方位"
-        title="量測距離/方位"
-      >
-        📏
-      </button>
+      {(toolsExpanded || measuring) && (
+        <button
+          onClick={toggle}
+          className={`safe-float-top7 pointer-events-auto absolute z-[1100] flex h-11 w-11 items-center justify-center rounded-full border text-lg active:scale-95 ${
+            measuring
+              ? 'border-tactical-cyan bg-tactical-cyan/20 text-tactical-cyan'
+              : 'border-slate-600 bg-tactical-panel/90'
+          }`}
+          aria-label="量測距離方位"
+          title="量測距離/方位"
+        >
+          📏
+        </button>
+      )}
 
       {measuring && (
         <div className="safe-top pointer-events-auto absolute left-1/2 top-0 z-[1100] mt-12 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-tactical-cyan/50 bg-tactical-panel/95 px-3 py-2">

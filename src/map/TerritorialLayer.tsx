@@ -79,6 +79,9 @@ export function TerritorialToggle() {
   const show = useTacticalStore((s) => s.showTerritorial)
   const setShow = useTacticalStore((s) => s.setShowTerritorial)
   const setStatus = useTacticalStore((s) => s.setStatus)
+  const toolsExpanded = useTacticalStore((s) => s.toolsExpanded)
+
+  if (!toolsExpanded && !show) return null
 
   return (
     <button
@@ -90,7 +93,7 @@ export function TerritorialToggle() {
             : '已關閉領海基線圖層',
         )
       }}
-      className={`safe-float-top4 pointer-events-auto absolute z-[1100] flex h-11 w-11 items-center justify-center rounded-full border text-lg active:scale-95 ${
+      className={`safe-float-top5 pointer-events-auto absolute z-[1100] flex h-11 w-11 items-center justify-center rounded-full border text-lg active:scale-95 ${
         show
           ? 'border-tactical-cyan bg-tactical-cyan/20 text-tactical-cyan'
           : 'border-slate-600 bg-tactical-panel/90'

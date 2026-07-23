@@ -3,7 +3,7 @@ import L from 'leaflet'
 import { useTacticalStore } from '../store/tacticalStore'
 import { SatelliteCanvasLayer } from './SatelliteCanvasLayer'
 import { buildWmsConfig, LAYERS, isSentinelConfigured } from '../lib/sentinel'
-import { buildGibsTrueColor, buildEsriImagery, buildS2Cloudless } from '../lib/gibs'
+import { buildGibsTrueColor, buildEsriImagery, buildS2Cloudless, buildEsriOcean } from '../lib/gibs'
 import type { DetectionCollection } from '../types'
 
 /**
@@ -87,6 +87,14 @@ export function LayerControl({ map }: { map: L.Map }) {
         esri.addTo(map)
         tileRef.current = esri
         setStatus('載入高解析空拍影像中（Esri）…')
+        return
+      }
+      if (opticalSource === 'ocean') {
+        const oc = buildEsriOcean()
+        oc.on('load', () => setStatus('海底地形（Esri Ocean · 覆蓋外海：水深/海脊/淺灘）'))
+        oc.addTo(map)
+        tileRef.current = oc
+        setStatus('載入海底地形圖中（Esri Ocean）…')
         return
       }
       if (opticalSource === 'eox') {

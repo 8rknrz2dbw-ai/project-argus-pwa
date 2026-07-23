@@ -58,9 +58,10 @@ export function OpticalControls() {
   }
 
   const SRC_INFO: Record<string, string> = {
-    esri: '高解析空拍鑲嵌 · 岸際/島礁最銳利（可放大到 ~z19，非每日、非即時）',
-    eox: 'Sentinel-2 無雲真彩色 · 10m 乾淨平滑、無雲遮蔽（年度合成，非每日）',
-    nasa: 'NASA MODIS 每日真彩色 · 約 250m，放大會馬賽克（可選歷史日期）',
+    esri: '高解析空拍鑲嵌 · 岸際/島礁最銳利，但⚠外海是空的（黑）——外海請切每日/無雲/海底',
+    eox: 'Sentinel-2 無雲真彩色 · 10m 乾淨平滑、含外海（年度合成，非每日）',
+    nasa: 'NASA MODIS 每日真彩色 · 含外海每日雲況，約 250m（可選歷史日期）',
+    ocean: '海底地形（Esri Ocean）· 覆蓋外海：水深/海脊/淺灘，適合漁區/航道/暗礁',
   }
 
   return (
@@ -106,14 +107,15 @@ export function OpticalControls() {
         </p>
       </div>
 
-      {/* 免金鑰時可三選一：高解析空拍 / Sentinel-2無雲 / 每日MODIS */}
+      {/* 免金鑰四選一：高解析空拍(陸) / 無雲S2 / 每日MODIS / 海底地形(外海) */}
       {!hd && (
-        <div className="grid grid-cols-3 gap-1 rounded-lg border border-slate-700 p-1">
+        <div className="grid grid-cols-4 gap-1 rounded-lg border border-slate-700 p-1">
           {(
             [
-              ['esri', '高解析', '空拍'],
+              ['esri', '高解析', '陸/岸'],
               ['eox', '無雲', 'S2·10m'],
               ['nasa', '每日', 'MODIS'],
+              ['ocean', '海底', '外海'],
             ] as const
           ).map(([id, t1, t2]) => (
             <button

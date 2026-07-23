@@ -34,7 +34,7 @@ interface TacticalState {
   /** 歷史觀測日期（YYYY-MM-DD）。 */
   observationDate: string
   /** 免金鑰光學影像來源：esri=高解析空拍(岸際最銳利)、eox=Sentinel-2無雲(10m平滑)、nasa=每日MODIS(有雲/較糊)。 */
-  opticalSource: 'nasa' | 'esri' | 'eox'
+  opticalSource: 'nasa' | 'esri' | 'eox' | 'ocean'
   /** 亮點掃描：每次按鈕 +1 觸發一次掃描。 */
   scanTick: number
   /** 掃描靈敏度（門檻 kStd，越小越敏感）。 */
@@ -111,6 +111,9 @@ interface TacticalState {
   /** 動畫可用的時間點(epoch) 陣列。 */
   animTimes: number[]
 
+  // ── 右側工具列是否展開（收合浮動按鈕，手機版面清爽）──
+  toolsExpanded: boolean
+
   // ── 領海基線/鄰接區參考線（跨模式覆蓋層）────────────
   showTerritorial: boolean
 
@@ -139,7 +142,7 @@ interface TacticalState {
   setMode: (mode: TacticalMode) => void
   setMaxCloudCover: (v: number) => void
   setObservationDate: (d: string) => void
-  setOpticalSource: (s: 'nasa' | 'esri' | 'eox') => void
+  setOpticalSource: (s: 'nasa' | 'esri' | 'eox' | 'ocean') => void
   bumpScan: () => void
   setScanSensitivity: (v: number) => void
   setBrightSpots: (s: Detection[]) => void
@@ -167,6 +170,7 @@ interface TacticalState {
   toggleMeasure: () => void
   addMeasurePoint: (p: { lat: number; lng: number }) => void
   clearMeasure: () => void
+  toggleTools: () => void
   setShowTerritorial: (v: boolean) => void
   setSeaStateField: (f: 'sst' | 'wave') => void
   setSeaStateRange: (r: { min: number; max: number } | null) => void
@@ -235,6 +239,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   ownPosition: null,
   trackRecording: false,
   ownTrack: [],
+  toolsExpanded: false,
   showTerritorial: false,
   statusMessage: '軌道預警模式待命中',
 
@@ -273,7 +278,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
 
   setMaxCloudCover: (v) => set({ maxCloudCover: v }),
   setObservationDate: (d) => set({ observationDate: d }),
-  setOpticalSource: (s: 'nasa' | 'esri' | 'eox') => set({ opticalSource: s }),
+  setOpticalSource: (s: 'nasa' | 'esri' | 'eox' | 'ocean') => set({ opticalSource: s }),
   bumpScan: () => set((st) => ({ scanTick: st.scanTick + 1 })),
   setScanSensitivity: (v) => set({ scanSensitivity: v }),
   setBrightSpots: (s) => set({ brightSpots: s }),
@@ -345,6 +350,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
     set((st) => ({ measuring: !st.measuring, measurePoints: st.measuring ? st.measurePoints : [] })),
   addMeasurePoint: (p) => set((st) => ({ measurePoints: [...st.measurePoints, p] })),
   clearMeasure: () => set({ measurePoints: [] }),
+  toggleTools: () => set((st) => ({ toolsExpanded: !st.toolsExpanded })),
   setShowTerritorial: (v) => set({ showTerritorial: v }),
   setSeaStateField: (f) => set({ seaStateField: f }),
   setSeaStateRange: (r) => set({ seaStateRange: r }),

@@ -18,6 +18,7 @@ export function CoordManager() {
   const updateSavedCoord = useTacticalStore((s) => s.updateSavedCoord)
   const removeSavedCoord = useTacticalStore((s) => s.removeSavedCoord)
   const clearHistory = useTacticalStore((s) => s.clearHistory)
+  const toolsExpanded = useTacticalStore((s) => s.toolsExpanded)
   const setMode = useTacticalStore((s) => s.setMode)
   const setManOverboard = useTacticalStore((s) => s.setManOverboard)
   const setStatus = useTacticalStore((s) => s.setStatus)
@@ -62,14 +63,16 @@ export function CoordManager() {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="safe-float-top5 pointer-events-auto absolute z-[1100] flex h-11 w-11 items-center justify-center rounded-full border border-slate-600 bg-tactical-panel/90 text-lg active:scale-95"
-        aria-label="座標管理"
-        title="萬用座標 / 最愛 / 釘選"
-      >
-        📌{pinCount > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-pink-500 px-1 text-[9px] font-bold text-white">{pinCount}</span>}
-      </button>
+      {(toolsExpanded || pinCount > 0) && (
+        <button
+          onClick={() => setOpen(true)}
+          className="safe-float-top6 pointer-events-auto absolute z-[1100] flex h-11 w-11 items-center justify-center rounded-full border border-slate-600 bg-tactical-panel/90 text-lg active:scale-95"
+          aria-label="座標管理"
+          title="萬用座標 / 最愛 / 釘選"
+        >
+          📌{pinCount > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-pink-500 px-1 text-[9px] font-bold text-white">{pinCount}</span>}
+        </button>
+      )}
 
       {open && (
         <div className="pointer-events-auto fixed inset-0 z-[2000] flex items-end justify-center bg-black/60 p-3 md:items-center">

@@ -32,6 +32,7 @@ export function MapInfoBar({ map }: { map: L.Map }) {
   if (mode === 'optical') {
     if (opticalSource === 'nasa') imgTime = `📅 影像 ${observationDate}（MODIS 當日）`
     else if (opticalSource === 'eox') imgTime = '📅 Sentinel-2 無雲 2023 年合成'
+    else if (opticalSource === 'ocean') imgTime = '🌊 海底地形（非時間性）'
     else imgTime = '📅 高解析空拍鑲嵌（非單一時間）'
   }
 

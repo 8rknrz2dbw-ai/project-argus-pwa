@@ -28,6 +28,24 @@ export function buildEsriImagery(): L.TileLayer {
 }
 
 /**
+ * Esri Ocean 海底地形（bathymetry）：免金鑰，覆蓋「開闊外海」——高解析空拍
+ * 影像在外海是空的（黑），海底地形圖則畫出水深/海脊/淺灘，對海上作業(漁區、
+ * 航道、暗礁)很有用。陸地為淡色地形。
+ */
+export function buildEsriOcean(): L.TileLayer {
+  return L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
+    {
+      maxNativeZoom: 13,
+      maxZoom: 19,
+      attribution: 'Esri Ocean Basemap · GEBCO/NOAA',
+      className: 'gibs-imagery',
+      crossOrigin: 'anonymous',
+    },
+  )
+}
+
+/**
  * EOX Sentinel-2 cloudless：免金鑰、免註冊的「全球無雲真彩色」鑲嵌影像。
  * 由 Sentinel-2（10m）多時相合成去雲，畫面乾淨、放大到岸際仍平滑清晰，
  * 沒有 MODIS 那種 250m 馬賽克。適合看海岸線/島礁/港口形狀。
