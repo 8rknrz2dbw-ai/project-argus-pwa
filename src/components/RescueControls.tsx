@@ -222,16 +222,25 @@ export function RescueControls() {
         </div>
       </div>
 
-      {/* 海象摘要 */}
+      {/* 海象摘要 + 資料來源徽章 */}
       {env && (
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <Stat label="🌬 風" value={`${env.windSpeed.toFixed(1)} m/s`} sub={`來自${bearingToText(env.windDir)}`} />
-          <Stat
-            label="🌊 洋流"
-            value={`${env.currentSpeed.toFixed(2)} m/s`}
-            sub={`往${bearingToText(env.currentDir)}`}
-          />
-          <Stat label="〰 浪高" value={`${env.waveHeight.toFixed(1)} m`} sub={env.live ? '即時' : '離線值'} />
+        <div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <Stat label="🌬 風" value={`${env.windSpeed.toFixed(1)} m/s`} sub={`來自${bearingToText(env.windDir)}`} />
+            <Stat
+              label="🌊 洋流"
+              value={`${env.currentSpeed.toFixed(2)} m/s`}
+              sub={`往${bearingToText(env.currentDir)}`}
+            />
+            <Stat label="〰 浪高" value={`${env.waveHeight.toFixed(1)} m`} sub={env.live ? '即時' : 'climatology'} />
+          </div>
+          <div
+            className={`mt-1 rounded px-2 py-0.5 text-center text-[10px] ${
+              env.live ? 'bg-tactical-green/10 text-tactical-green' : 'bg-amber-500/10 text-amber-400'
+            }`}
+          >
+            {env.live ? '海流來源：即時 Open-Meteo（隨位置變化）' : '海流來源：黑潮氣候平均（離線／隨位置變化，非即時）'}
+          </div>
         </div>
       )}
 
