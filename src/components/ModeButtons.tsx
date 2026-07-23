@@ -14,6 +14,7 @@ const MODES: ModeDef[] = [
   { id: 'optical', icon: '🌤️', title: '岸際光學', subtitle: 'Optical · 低雲量' },
   { id: 'ais', icon: '📡', title: 'AIS 識別', subtitle: 'AIS · 即時船位' },
   { id: 'rescue', icon: '🆘', title: '搜救推演', subtitle: 'Rescue · 漂流預判' },
+  { id: 'seastate', icon: '🌡️', title: '海況熱圖', subtitle: 'Sea · 海溫/浪高' },
 ]
 
 /**
