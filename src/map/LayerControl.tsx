@@ -3,6 +3,7 @@ import L from 'leaflet'
 import { useTacticalStore } from '../store/tacticalStore'
 import { SatelliteCanvasLayer } from './SatelliteCanvasLayer'
 import { buildWmsConfig, LAYERS, isSentinelConfigured } from '../lib/sentinel'
+import { buildGibsTrueColor } from '../lib/gibs'
 import type { DetectionCollection } from '../types'
 
 /**
@@ -25,7 +26,8 @@ export function LayerControl({ map }: { map: L.Map }) {
   const setStatus = useTacticalStore((s) => s.setStatus)
 
   // 各圖層的參照（用 ref 才能在 cleanup 時精準卸載）
-  const tileRef = useRef<L.TileLayer.WMS | null>(null)
+  // WMS 與一般 TileLayer(GIBS) 都是 TileLayer 的子/同類，用 TileLayer 兼容兩者。
+  const tileRef = useRef<L.TileLayer | null>(null)
   const vectorRef = useRef<L.GeoJSON | null>(null)
   const canvasRef = useRef<SatelliteCanvasLayer | null>(null)
 
@@ -68,13 +70,29 @@ export function LayerControl({ map }: { map: L.Map }) {
       // Sentinel-1 SAR 影像層（Canvas 已卸載，釋放 RAM）
       mountWms(LAYERS.sarVV, undefined)
     } else if (mode === 'optical') {
-      // Sentinel-2 光學 + MAXCC 雲量過濾
-      mountWms(LAYERS.opticalTrueColor, maxCloudCover)
+      // 有 Sentinel 金鑰 → 用 Sentinel-2（10m，可過濾雲量）；
+      // 沒有 → 用 NASA GIBS 免金鑰真彩色（約 250m），開箱即用。
+      if (isSentinelConfigured()) {
+        mountWms(LAYERS.opticalTrueColor, maxCloudCover)
+      } else {
+        mountGibs()
+      }
+    }
+
+    function mountGibs() {
+      const gibs = buildGibsTrueColor(observationDate)
+      gibs.on('load', () =>
+        setStatus('免費衛星影像（NASA MODIS · 約 250m）。設定 Sentinel 金鑰可升級 10m 高解析'),
+      )
+      gibs.addTo(map)
+      tileRef.current = gibs
+      setStatus('載入免費衛星影像中（NASA MODIS）…若空白請把日期往回調 1–2 天')
     }
 
     function mountWms(layer: string, maxcc: number | undefined) {
       if (!isSentinelConfigured()) {
-        setStatus('⚠ 未設定 Sentinel Hub 金鑰，影像層停用（見 .env.example）')
+        // SAR 沒有免金鑰替代來源，僅提示。
+        setStatus('⚠ 雷達影像需要 Sentinel 金鑰（⚙️ 設定貼上後啟用）')
         return
       }
       const { url, params } = buildWmsConfig({ layer, date: observationDate, maxCloudCover: maxcc })
