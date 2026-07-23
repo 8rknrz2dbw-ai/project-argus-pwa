@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTacticalStore } from '../store/tacticalStore'
 import { bearingToText, DRIFT_TARGETS } from '../lib/drift'
 import { buildReport, shareReport } from '../lib/report'
@@ -31,6 +32,21 @@ export function RescueControls() {
   const mcSummary = useTacticalStore((s) => s.mcSummary)
   const driftTargetLabel =
     DRIFT_TARGETS.find((t) => t.id === driftTargetId)?.label ?? '落海人'
+
+  // 手動輸入座標（實戰時座標常由無線電報來）
+  const [manual, setManual] = useState(false)
+  const [latStr, setLatStr] = useState('')
+  const [lngStr, setLngStr] = useState('')
+  const placeByCoord = () => {
+    const lat = parseFloat(latStr)
+    const lng = parseFloat(lngStr)
+    if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+      setMob({ lat, lng })
+      setManual(false)
+    } else {
+      setStatus('⚠ 座標格式錯誤（緯度 -90~90、經度 -180~180）')
+    }
+  }
 
   const clear = () => {
     setMob(null)
@@ -79,6 +95,40 @@ export function RescueControls() {
         >
           逆推 · 發現→從哪來
         </button>
+      </div>
+
+      {/* 手動輸入座標 */}
+      <div>
+        <button
+          onClick={() => setManual(!manual)}
+          className="text-[11px] text-tactical-cyan underline-offset-2 hover:underline"
+        >
+          {manual ? '▾ 手動輸入座標' : '▸ 手動輸入座標（無線電報座標）'}
+        </button>
+        {manual && (
+          <div className="mt-1 flex items-center gap-1">
+            <input
+              inputMode="decimal"
+              placeholder="緯度 24.5"
+              value={latStr}
+              onChange={(e) => setLatStr(e.target.value)}
+              className="w-0 flex-1 rounded border border-slate-600 bg-slate-900 px-2 py-1.5 font-mono text-xs text-slate-200"
+            />
+            <input
+              inputMode="decimal"
+              placeholder="經度 122.0"
+              value={lngStr}
+              onChange={(e) => setLngStr(e.target.value)}
+              className="w-0 flex-1 rounded border border-slate-600 bg-slate-900 px-2 py-1.5 font-mono text-xs text-slate-200"
+            />
+            <button
+              onClick={placeByCoord}
+              className="shrink-0 rounded border border-tactical-cyan bg-tactical-cyan/10 px-2 py-1.5 text-xs font-bold text-tactical-cyan active:scale-95"
+            >
+              標記
+            </button>
+          </div>
+        )}
       </div>
 
       {!mob && (
