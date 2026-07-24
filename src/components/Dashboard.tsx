@@ -9,6 +9,7 @@ import { RescueControls } from './RescueControls'
 import { SeaStateControls } from './SeaStateControls'
 import { EnvAnimControls } from './EnvAnimControls'
 import { TyphoonControls } from './TyphoonControls'
+import { OverpassControls } from './OverpassControls'
 
 /**
  * Dashboard —— 底部（手機）/ 左側（平板以上）的控制面板。
@@ -26,6 +27,7 @@ export function Dashboard() {
   const [collapsed, setCollapsed] = useState(false)
 
   const hasPanel =
+    mode === 'orbit' ||
     mode === 'optical' ||
     mode === 'sar' ||
     mode === 'ais' ||
@@ -43,6 +45,7 @@ export function Dashboard() {
 
   const controls = (
     <>
+      {mode === 'orbit' && <OverpassControls />}
       {mode === 'optical' && <OpticalControls />}
       {mode === 'sar' && <SarControls />}
       {mode === 'ais' && <AisControls />}

@@ -1,7 +1,7 @@
 import { useTacticalStore } from '../store/tacticalStore'
 
 const MODE_LABEL: Record<string, string> = {
-  orbit: 'ORBIT',
+  orbit: 'PASS',
   sar: 'SAR',
   optical: 'OPTICAL',
   ais: 'AIS',
@@ -27,7 +27,7 @@ export function StatusBar() {
         <span className="shrink-0 font-mono text-xs font-bold tracking-widest text-tactical-green">
           阿爾戈斯 · {MODE_LABEL[mode]}
         </span>
-        <span className="shrink-0 font-mono text-[9px] text-slate-500">v1.59</span>
+        <span className="shrink-0 font-mono text-[9px] text-slate-500">v1.60</span>
       </div>
       <span className="min-w-0 truncate font-mono text-[11px] text-slate-300">{statusMessage}</span>
     </div>

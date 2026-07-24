@@ -9,7 +9,7 @@ interface ModeDef {
 }
 
 const MODES: ModeDef[] = [
-  { id: 'orbit', icon: '🛰️', title: '軌道預警', subtitle: 'Orbit · 衛星軌跡' },
+  { id: 'orbit', icon: '🛰️', title: '衛星過境', subtitle: 'Pass · 影像時機' },
   { id: 'sar', icon: '🚢', title: '雷達盲搜', subtitle: 'SAR · AI 辨識' },
   { id: 'optical', icon: '🌤️', title: '岸際光學', subtitle: 'Optical · 低雲量' },
   { id: 'ais', icon: '📡', title: 'AIS 識別', subtitle: 'AIS · 即時船位' },
