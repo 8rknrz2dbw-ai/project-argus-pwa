@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTacticalStore } from '../store/tacticalStore'
-import { fmtClock, driftEpoch } from '../lib/timefmt'
+import { fmtClock, driftEpoch, fmtDayHour } from '../lib/timefmt'
 import { ModeButtons } from './ModeButtons'
 import { OpticalControls } from './OpticalControls'
 import { SarControls } from './SarControls'
@@ -20,6 +20,9 @@ export function Dashboard() {
   const setScrubHours = useTacticalStore((s) => s.setScrubHours)
   const driftPoints = useTacticalStore((s) => s.driftPoints)
   const incidentTime = useTacticalStore((s) => s.incidentTime)
+  const activeTyphoon = useTacticalStore((s) => s.activeTyphoon)
+  const tyScrubHours = useTacticalStore((s) => s.tyScrubHours)
+  const setTyScrubHours = useTacticalStore((s) => s.setTyScrubHours)
   const [collapsed, setCollapsed] = useState(false)
 
   const hasPanel =
@@ -32,6 +35,11 @@ export function Dashboard() {
     mode === 'typhoon'
   // 收合時、搜救有結果 → 顯示浮動迷你時間軸（拉桿時不擋地圖）
   const showMiniScrub = collapsed && mode === 'rescue' && driftPoints.length > 0
+  // 收合時、颱風模式 → 浮動迷你時間軸（拖曳看暴風圈預判時不擋地圖）
+  const tyMaxHours = activeTyphoon
+    ? activeTyphoon.track.reduce((m, p) => (p.hours > 0 ? Math.max(m, p.hours) : m), 0)
+    : 0
+  const showTyMiniScrub = collapsed && mode === 'typhoon' && tyMaxHours > 0
 
   const controls = (
     <>
@@ -87,6 +95,25 @@ export function Dashboard() {
               value={scrubHours}
               onChange={(e) => setScrubHours(Number(e.target.value))}
               className="w-full accent-amber-400"
+            />
+          </div>
+        )}
+
+        {/* 收合時的颱風浮動迷你時間軸 */}
+        {showTyMiniScrub && (
+          <div className="flex items-center gap-2 rounded-lg border border-tactical-cyan/40 bg-tactical-panel/95 px-3 py-2">
+            <span className="shrink-0 font-mono text-[11px] text-tactical-cyan">
+              🌀{' '}
+              {tyScrubHours === 0 ? '現在' : `${fmtDayHour(Date.now() + tyScrubHours * 3600000)} +${tyScrubHours}h`}
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={tyMaxHours}
+              step={1}
+              value={tyScrubHours}
+              onChange={(e) => setTyScrubHours(Number(e.target.value))}
+              className="w-full accent-cyan-400"
             />
           </div>
         )}
