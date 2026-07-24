@@ -24,6 +24,10 @@ export function LayerManager() {
   const setShowPorts = useTacticalStore((s) => s.setShowPorts)
   const showRainRadar = useTacticalStore((s) => s.showRainRadar)
   const setShowRainRadar = useTacticalStore((s) => s.setShowRainRadar)
+  const showRestricted = useTacticalStore((s) => s.showRestricted)
+  const setShowRestricted = useTacticalStore((s) => s.setShowRestricted)
+  const showEnforceLine = useTacticalStore((s) => s.showEnforceLine)
+  const setShowEnforceLine = useTacticalStore((s) => s.setShowEnforceLine)
   const poiHidden = useTacticalStore((s) => s.poiHidden)
   const setPoiHidden = useTacticalStore((s) => s.setPoiHidden)
   const poiPoints = useTacticalStore((s) => s.poiPoints)
@@ -37,7 +41,9 @@ export function LayerManager() {
     showWindFarms ||
     showMedianLine ||
     showPorts ||
-    showRainRadar
+    showRainRadar ||
+    showRestricted ||
+    showEnforceLine
 
   return (
     <>
@@ -83,51 +89,89 @@ export function LayerManager() {
               </div>
             </div>
 
-            {/* 疊加圖層（複選）*/}
-            <div className="mb-2 text-[11px] font-semibold text-slate-400">🧩 疊加圖層</div>
-            <div className="flex flex-col gap-1.5">
-              <LayerCheck
-                label="🚧 領海基線 / 12浬 / 24浬"
-                sub="領海、鄰接區參考線（判斷船隻是否進入我領海）"
-                checked={showTerritorial}
-                onToggle={() => setShowTerritorial(!showTerritorial)}
-              />
-              <LayerCheck
-                label="🌀 海上風電場"
-                sub="西部外海離岸風電場示意範圍＋風機（作業區/限制航行/避碰熱點）"
-                checked={showWindFarms}
-                onToggle={() => setShowWindFarms(!showWindFarms)}
-              />
-              <LayerCheck
-                label="🚩 台灣海峽中線（示意）"
-                sub="橫貫海峽的越界態勢監控參考線（非官方劃界）"
-                checked={showMedianLine}
-                onToggle={() => setShowMedianLine(!showMedianLine)}
-              />
-              <LayerCheck
-                label="⚓ 主要漁港／避風港"
-                sub="全台主要漁港/商港（救難後送、就近調度、颱風避風）"
-                checked={showPorts}
-                onToggle={() => setShowPorts(!showPorts)}
-              />
-              <LayerCheck
-                label="🌧️ 即時降雨雷達"
-                sub="全球雷達回波（RainViewer，免金鑰）；出海避雷雨用"
-                checked={showRainRadar}
-                onToggle={() => setShowRainRadar(!showRainRadar)}
-              />
-              <LayerCheck
-                label="🌬️ 風向風速（海況）"
-                sub="即時風向風速箭頭（Open-Meteo，免金鑰）；平移地圖自動更新"
-                checked={showWind}
-                onToggle={() => setShowWind(!showWind)}
-              />
-              <LayerCheck
-                label={`🚩 自訂點位（${poiPoints.length}）`}
-                sub="安檢所等自訂據點；取消勾選＝一鍵全部隱藏（旁人看不到）"
-                checked={!poiHidden}
-                onToggle={() => setPoiHidden(!poiHidden)}
-              />
+            {/* 疊加圖層（複選，分類）*/}
+            <div className="flex flex-col gap-2.5">
+              {/* 界線 / 管制 */}
+              <div>
+                <div className="mb-1.5 text-[11px] font-semibold text-slate-400">⚖️ 界線 / 管制</div>
+                <div className="flex flex-col gap-1.5">
+                  <LayerCheck
+                    label="🚧 領海基線 / 12浬 / 24浬"
+                    sub="領海、鄰接區參考線（判斷船隻是否進入我領海）"
+                    checked={showTerritorial}
+                    onToggle={() => setShowTerritorial(!showTerritorial)}
+                  />
+                  <LayerCheck
+                    label="🚩 台灣海峽中線（示意）"
+                    sub="橫貫海峽的越界態勢監控參考線（非官方劃界）"
+                    checked={showMedianLine}
+                    onToggle={() => setShowMedianLine(!showMedianLine)}
+                  />
+                  <LayerCheck
+                    label="🚫 金馬禁／限制水域（示意）"
+                    sub="金門/馬祖/烏坵/東引 禁止(近岸)＋限制(外緣)水域；處置大陸船越界"
+                    checked={showRestricted}
+                    onToggle={() => setShowRestricted(!showRestricted)}
+                  />
+                  <LayerCheck
+                    label="📏 暫定執法線（示意）"
+                    sub="台日漁業協議外緣、台菲巴士海峽中線；對外漁業執法邊界態勢"
+                    checked={showEnforceLine}
+                    onToggle={() => setShowEnforceLine(!showEnforceLine)}
+                  />
+                </div>
+              </div>
+
+              {/* 設施 / 港口 */}
+              <div>
+                <div className="mb-1.5 text-[11px] font-semibold text-slate-400">🏗️ 設施 / 港口</div>
+                <div className="flex flex-col gap-1.5">
+                  <LayerCheck
+                    label="🌀 海上風電場"
+                    sub="西部外海離岸風電場示意範圍＋風機（作業區/限制航行/避碰熱點）"
+                    checked={showWindFarms}
+                    onToggle={() => setShowWindFarms(!showWindFarms)}
+                  />
+                  <LayerCheck
+                    label="⚓ 主要漁港／避風港"
+                    sub="全台主要漁港/商港（救難後送、就近調度、颱風避風）"
+                    checked={showPorts}
+                    onToggle={() => setShowPorts(!showPorts)}
+                  />
+                </div>
+              </div>
+
+              {/* 天氣 / 海況 */}
+              <div>
+                <div className="mb-1.5 text-[11px] font-semibold text-slate-400">🌦️ 天氣 / 海況</div>
+                <div className="flex flex-col gap-1.5">
+                  <LayerCheck
+                    label="🌧️ 即時降雨雷達"
+                    sub="全球雷達回波（RainViewer，免金鑰）；出海避雷雨用"
+                    checked={showRainRadar}
+                    onToggle={() => setShowRainRadar(!showRainRadar)}
+                  />
+                  <LayerCheck
+                    label="🌬️ 風向風速（海況）"
+                    sub="即時風向風速箭頭（Open-Meteo，免金鑰）；平移地圖自動更新"
+                    checked={showWind}
+                    onToggle={() => setShowWind(!showWind)}
+                  />
+                </div>
+              </div>
+
+              {/* 自訂 */}
+              <div>
+                <div className="mb-1.5 text-[11px] font-semibold text-slate-400">🚩 自訂</div>
+                <div className="flex flex-col gap-1.5">
+                  <LayerCheck
+                    label={`🚩 自訂點位（${poiPoints.length}）`}
+                    sub="安檢所等自訂據點；取消勾選＝一鍵全部隱藏（旁人看不到）"
+                    checked={!poiHidden}
+                    onToggle={() => setPoiHidden(!poiHidden)}
+                  />
+                </div>
+              </div>
             </div>
 
             <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
