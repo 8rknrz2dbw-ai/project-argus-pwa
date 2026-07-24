@@ -7,6 +7,7 @@ import { fetchCwaTyphoon } from '../lib/cwa'
 import { fetchGdacsTyphoon } from '../lib/gdacs'
 import { estimateWarnings } from '../lib/typhoonWarning'
 import { offsetRing, TAIWAN_BASELINE } from '../lib/territorialWaters'
+import { fmtDay, fmtDayHour } from '../lib/timefmt'
 
 /**
  * 颱風路徑圖層：現在位置（旋轉符號）+ 暴風圈 + 預報路徑 + 潛勢範圍錐 + 時間點。
@@ -103,9 +104,9 @@ export function TyphoonLayer({ map }: { map: L.Map }) {
     L.marker([s.lat, s.lng], {
       icon: L.divIcon({
         className: '',
-        html: `<div class="ty-scrub">+${Math.round(s.hours)}h 預判<br/>近中心風 ${s.windKt} kt</div>`,
-        iconSize: [104, 30],
-        iconAnchor: [52, -6],
+        html: `<div class="ty-scrub">${fmtDayHour(Date.now() + s.hours * 3600000)} 預判<br/>+${Math.round(s.hours)}h · 近中心風 ${s.windKt} kt</div>`,
+        iconSize: [140, 30],
+        iconAnchor: [70, -6],
       }),
       zIndexOffset: 1400,
     }).addTo(g)
@@ -165,13 +166,14 @@ function drawWarnThresholds(group: L.LayerGroup, ty: Typhoon) {
     .addTo(group)
 
   const w = estimateWarnings(ty)
+  const base = Date.now()
   const flag = (p: { lat: number; lng: number; hours: number }, color: string, label: string) => {
     L.marker([p.lat, p.lng], {
       icon: L.divIcon({
         className: '',
-        html: `<div class="warn-flag" style="border-color:${color};color:${color}">⚠ ${label}<br/>+${p.hours}h</div>`,
-        iconSize: [96, 30],
-        iconAnchor: [48, 34],
+        html: `<div class="warn-flag" style="border-color:${color};color:${color}">⚠ ${label}<br/>${fmtDay(base + p.hours * 3600000)} +${p.hours}h</div>`,
+        iconSize: [120, 30],
+        iconAnchor: [60, 34],
       }),
       zIndexOffset: 1200,
     }).addTo(group)
@@ -234,6 +236,7 @@ function dest(lat: number, lng: number, bearingDeg: number, distM: number) {
 function draw(group: L.LayerGroup, ty: Typhoon) {
   const future = ty.track.filter((p) => p.hours >= 0)
   const cur = currentPoint(ty)
+  const base = Date.now() // 「現在」基準：+Nh 換算成實際日期/星期
 
   // 潛勢範圍錐（越遠越寬）：沿預報點左右各偏一個隨時間增大的半徑，連成多邊形
   const left: [number, number][] = []
@@ -280,13 +283,19 @@ function draw(group: L.LayerGroup, ty: Typhoon) {
       weight: 1,
     })
       .bindPopup(
-        `<b style="color:#f43f5e">${p.hours === 0 ? '現在' : p.hours < 0 ? `${-p.hours}h 前` : `+${p.hours}h`}</b><br/>` +
+        `<b style="color:#f43f5e">${p.hours === 0 ? '現在' : p.hours < 0 ? `${-p.hours}h 前` : `+${p.hours}h`}</b>` +
+          `<span style="color:#94a3b8"> · ${fmtDayHour(base + p.hours * 3600000)}</span><br/>` +
           `${p.cat}｜近中心風 ${p.windKt} kt<br/>暴風半徑 ${p.galeRadiusKm} km`,
       )
       .addTo(group)
     if (p.hours > 0) {
       L.marker([p.lat, p.lng], {
-        icon: L.divIcon({ className: '', html: `<div class="ty-time">+${p.hours}h</div>`, iconSize: [34, 16], iconAnchor: [17, -6] }),
+        icon: L.divIcon({
+          className: '',
+          html: `<div class="ty-time">${fmtDay(base + p.hours * 3600000)}<br/>+${p.hours}h</div>`,
+          iconSize: [66, 28],
+          iconAnchor: [33, -6],
+        }),
       }).addTo(group)
     }
   }

@@ -14,6 +14,20 @@ export function fmtClockShort(epoch: number): string {
   return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}時`
 }
 
+const WEEKDAY = ['日', '一', '二', '三', '四', '五', '六']
+
+/** epoch → 「M/D 週X」（颱風/預報標籤：日期＋星期）。 */
+export function fmtDay(epoch: number): string {
+  const d = new Date(epoch)
+  return `${d.getMonth() + 1}/${d.getDate()} 週${WEEKDAY[d.getDay()]}`
+}
+
+/** epoch → 「M/D(週X) HH時」（含星期與時刻）。 */
+export function fmtDayHour(epoch: number): string {
+  const d = new Date(epoch)
+  return `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAY[d.getDay()]}) ${String(d.getHours()).padStart(2, '0')}時`
+}
+
 /**
  * 漂流時刻換算（以 datum=回報/落海時間為基準）：
  * forward=datum + hours；reverse(來源)=datum − hours。
