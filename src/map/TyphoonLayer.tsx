@@ -5,6 +5,8 @@ import { demoTyphoon, currentPoint, type Typhoon } from '../lib/typhoon'
 import { isCwaConfigured } from '../lib/config'
 import { fetchCwaTyphoon } from '../lib/cwa'
 import { fetchGdacsTyphoon } from '../lib/gdacs'
+import { estimateWarnings } from '../lib/typhoonWarning'
+import { offsetRing, TAIWAN_BASELINE } from '../lib/territorialWaters'
 
 /**
  * 颱風路徑圖層：現在位置（旋轉符號）+ 暴風圈 + 預報路徑 + 潛勢範圍錐 + 時間點。
@@ -99,6 +101,42 @@ function drawRelative(group: L.LayerGroup, ownLat: number, ownLng: number, tyLat
   }).addTo(group)
 }
 
+/**
+ * 畫「颱風警報門檻」：
+ *  - 海上警報門檻線：台灣海岸外約 100km（暴風圈碰到＝達海警發布時機）。
+ *  - 在預報路徑上標出「首次達海警/陸警門檻」的位置與時刻，直接看出何時可能發警報。
+ */
+function drawWarnThresholds(group: L.LayerGroup, ty: Typhoon) {
+  // 100km ≈ 54 浬，用既有 offsetRing 由基線外偏，得離岸約 100km 的參考線。
+  const seaLine = offsetRing(TAIWAN_BASELINE, 100 / 1.852)
+  L.polygon(seaLine, {
+    color: '#f59e0b',
+    weight: 1.5,
+    dashArray: '4 6',
+    opacity: 0.75,
+    fill: false,
+  })
+    .bindPopup(
+      '<b style="color:#f59e0b">海上警報門檻線（離岸約 100km）</b><br/>颱風七級暴風圈碰到此線，即達中央氣象署「海上颱風警報」發布時機（約 24h 前）。',
+    )
+    .addTo(group)
+
+  const w = estimateWarnings(ty)
+  const flag = (p: { lat: number; lng: number; hours: number }, color: string, label: string) => {
+    L.marker([p.lat, p.lng], {
+      icon: L.divIcon({
+        className: '',
+        html: `<div class="warn-flag" style="border-color:${color};color:${color}">⚠ ${label}<br/>+${p.hours}h</div>`,
+        iconSize: [96, 30],
+        iconAnchor: [48, 34],
+      }),
+      zIndexOffset: 1200,
+    }).addTo(group)
+  }
+  if (w.seaPoint) flag(w.seaPoint, '#f59e0b', '達海警門檻')
+  if (w.landPoint) flag(w.landPoint, '#f43f5e', '達陸警門檻')
+}
+
 function dest(lat: number, lng: number, bearingDeg: number, distM: number) {
   const b = bearingDeg * DEG
   return {
@@ -130,6 +168,9 @@ function draw(group: L.LayerGroup, ty: Typhoon) {
       group,
     )
   }
+
+  // ── 颱風警報門檻線（依 CWA 準則：暴風圈碰到即達發布時機）──────
+  drawWarnThresholds(group, ty)
 
   // 預報路徑線
   L.polyline(
