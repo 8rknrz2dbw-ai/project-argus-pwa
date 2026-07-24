@@ -6,6 +6,7 @@ import { CoordManager } from './components/CoordManager'
 import { MeasureControl } from './components/MeasureControl'
 import { FieldOpsPanel } from './components/FieldOpsPanel'
 import { LayerManager } from './components/LayerManager'
+import { NightOpsPanel } from './components/NightOpsPanel'
 import { ToolsFab } from './components/ToolsFab'
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
       <MeasureControl />
       <LayerManager />
       <FieldOpsPanel />
+      <NightOpsPanel />
       <Dashboard />
     </div>
   )
