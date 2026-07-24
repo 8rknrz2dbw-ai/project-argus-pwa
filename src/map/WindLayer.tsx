@@ -18,8 +18,10 @@ export function WindLayer({ map }: { map: L.Map }) {
     const group = L.layerGroup().addTo(map)
     groupRef.current = group
     let cancelled = false
+    let gen = 0 // 世代序號：只讓「最新一次」的抓取結果繪製，避免重疊抓取畫到舊資料
 
     const load = async () => {
+      const myGen = ++gen
       const b = map.getBounds()
       const cols = 7
       const rows = 5
@@ -32,7 +34,7 @@ export function WindLayer({ map }: { map: L.Map }) {
         }
       setStatus('風場：載入即時風向風速…')
       const env = await fetchEnvGrid(pts).catch(() => [])
-      if (cancelled || !groupRef.current) return
+      if (cancelled || myGen !== gen || !groupRef.current) return
       group.clearLayers()
       const spanKm = (b.getNorth() - b.getSouth()) * 111
       const base = Math.max(1500, (spanKm / rows) * 1000 * 0.32) // 依縮放調整箭頭長度

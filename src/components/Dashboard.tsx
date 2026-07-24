@@ -104,7 +104,7 @@ export function Dashboard() {
 
         {/* 收合時的颱風浮動迷你時間軸 */}
         {showTyMiniScrub && (
-          <div className="flex items-center gap-2 rounded-lg border border-tactical-cyan/40 bg-tactical-panel/95 px-3 py-2">
+          <div className="flex items-center gap-2 rounded-lg border border-tactical-cyan/40 bg-tactical-panel/95 px-3 py-2 md:hidden">
             <span className="shrink-0 font-mono text-[11px] text-tactical-cyan">
               🌀{' '}
               {tyScrubHours === 0 ? '現在' : `${fmtDayHour(Date.now() + tyScrubHours * 3600000)} +${tyScrubHours}h`}
