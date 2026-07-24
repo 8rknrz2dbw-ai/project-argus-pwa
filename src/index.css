@@ -306,11 +306,13 @@ body,
 .ty-time {
   font: 700 10px ui-monospace, monospace;
   color: #fecdd3;
-  background: rgba(159, 18, 57, 0.8);
+  background: rgba(159, 18, 57, 0.85);
   border: 1px solid #f43f5e;
   border-radius: 8px;
   text-align: center;
-  line-height: 16px;
+  line-height: 1.2;
+  padding: 2px 5px;
+  white-space: nowrap;
 }
 /* 颱風時間軸拖曳的預判位置標籤 */
 .ty-scrub {

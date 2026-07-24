@@ -3,6 +3,7 @@ import { isCwaConfigured } from '../lib/config'
 import { estimateWarnings, coastGuardVerdict } from '../lib/typhoonWarning'
 import { typhoonBrief } from '../lib/typhoonBrief'
 import { interpTyphoonAt } from '../map/TyphoonLayer'
+import { fmtDay, fmtDayHour } from '../lib/timefmt'
 import { useTacticalStore } from '../store/tacticalStore'
 
 /** 名稱是否為「國際編號/尚未命名」(如 ELEVEN-26、TD、INVEST 91W)。 */
@@ -130,6 +131,7 @@ export function TyphoonControls() {
               key={p.hours}
               className="flex flex-col items-center rounded-md border border-rose-500/30 bg-rose-500/5 px-1 py-1.5"
             >
+              <span className="text-[9px] font-semibold text-amber-300">{fmtDay(Date.now() + p.hours * 3600000)}</span>
               <span className="font-mono text-xs font-bold text-rose-300">+{p.hours}h</span>
               <span className="text-[10px] text-slate-400">{p.windKt} kt</span>
               <span className="text-[9px] text-slate-500">{p.galeRadiusKm} km</span>
@@ -147,7 +149,7 @@ export function TyphoonControls() {
               {tyScrubHours === 0
                 ? '現在'
                 : scrubInfo
-                  ? `+${Math.round(scrubInfo.hours)}h · ${scrubInfo.windKt}kt · 圈${Math.round(scrubInfo.galeRadiusKm)}km`
+                  ? `${fmtDayHour(Date.now() + scrubInfo.hours * 3600000)} · +${Math.round(scrubInfo.hours)}h · ${scrubInfo.windKt}kt`
                   : `+${tyScrubHours}h`}
             </span>
           </div>
