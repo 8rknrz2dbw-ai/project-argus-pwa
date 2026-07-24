@@ -69,11 +69,8 @@ export function LayerControl({ map }: { map: L.Map }) {
     removeVector()
     removeCanvas()
 
-    if (mode === 'orbit') {
-      // 只掛 Canvas 動態層
-      canvasRef.current = new SatelliteCanvasLayer()
-      canvasRef.current.addTo(map)
-    } else if (mode === 'sar') {
+    // 註：orbit 模式已改為「衛星過境預報」（純資訊面板，不掛地圖動畫層）。
+    if (mode === 'sar') {
       // Sentinel-1 SAR 影像層（Canvas 已卸載，釋放 RAM）
       mountWms(LAYERS.sarVV, undefined)
     } else if (mode === 'optical') {
