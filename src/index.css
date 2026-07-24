@@ -312,6 +312,17 @@ body,
   text-align: center;
   line-height: 16px;
 }
+/* 颱風警報門檻觸發旗標（達海警/陸警發布時機的路徑點） */
+.warn-flag {
+  font: 700 10px ui-monospace, monospace;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1.5px solid;
+  border-radius: 8px;
+  text-align: center;
+  line-height: 1.25;
+  padding: 2px 4px;
+  white-space: nowrap;
+}
 
 /* Leaflet 控制項配色微調 */
 .leaflet-control-zoom a,

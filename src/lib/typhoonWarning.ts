@@ -26,11 +26,20 @@ function nearestTaiwanKm(lat: number, lng: number): number {
   return best
 }
 
+export interface TriggerPoint {
+  lat: number
+  lng: number
+  hours: number
+}
+
 export interface WarningEstimate {
   /** 最快海警（暴風圈進近海 100km）距現在小時；null=推估不影響。 */
   seaHours: number | null
   /** 最快陸警（暴風圈觸陸）距現在小時；null=推估不影響。 */
   landHours: number | null
+  /** 路徑上首次達海警/陸警門檻的位置（畫在地圖上標示）。 */
+  seaPoint: TriggerPoint | null
+  landPoint: TriggerPoint | null
   /** 暴風圈邊緣與台灣海岸的最近距離(km，正=尚有距離、負=已觸及)。 */
   closestGapKm: number
   /** 是否已在影響中。 */
@@ -86,17 +95,27 @@ export function estimateWarnings(ty: Typhoon): WarningEstimate {
   const pts = ty.track.filter((p) => p.hours >= 0)
   let seaHours: number | null = null
   let landHours: number | null = null
+  let seaPoint: TriggerPoint | null = null
+  let landPoint: TriggerPoint | null = null
   let closestGap = Infinity
   for (const p of pts) {
     const centerKm = nearestTaiwanKm(p.lat, p.lng)
     const gap = centerKm - p.galeRadiusKm // 暴風圈邊緣到海岸的距離
     if (gap < closestGap) closestGap = gap
-    if (seaHours === null && gap <= SEA_BUFFER_KM) seaHours = p.hours
-    if (landHours === null && gap <= 0) landHours = p.hours
+    if (seaHours === null && gap <= SEA_BUFFER_KM) {
+      seaHours = p.hours
+      seaPoint = { lat: p.lat, lng: p.lng, hours: p.hours }
+    }
+    if (landHours === null && gap <= 0) {
+      landHours = p.hours
+      landPoint = { lat: p.lat, lng: p.lng, hours: p.hours }
+    }
   }
   return {
     seaHours,
     landHours,
+    seaPoint,
+    landPoint,
     closestGapKm: closestGap,
     seaNow: seaHours === 0,
     landNow: landHours === 0,
