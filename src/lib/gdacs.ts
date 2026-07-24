@@ -154,15 +154,54 @@ async function fetchTrack(eventid: unknown, episodeid: unknown, cur: TyphoonPoin
 
   // 1) 有時刻的路徑點最可靠
   if (timed.length >= 2) return mergeCurrent(timed, cur)
-  // 2) 只取「單一最長」的那條線當路徑（不混用多條），時刻為估算
-  const best = lines.slice().sort((a, b) => b.length - a.length)[0]
-  if (best && best.length >= 3) {
+  // 2) 把破碎的開放線段（GDACS 常把軌跡切成多段 2 點線）接回單一軌跡；
+  //    略過封閉環（暴風半徑圈）。取接起來最長的那條當路徑，時刻為估算。
+  const openSegs = lines.filter((l) => l.length >= 2 && !isClosedRing(l))
+  const best = stitch(openSegs).sort((a, b) => b.length - a.length)[0]
+  if (best && best.length >= 2) {
     const lineTrack = lineToTrack(best, cur)
-    if (lineTrack.length >= 3) return lineTrack
+    if (lineTrack.length >= 2) return lineTrack
   }
   // 3) 無時刻的點（至少畫出路徑形狀）
   if (untimed.length >= 2) return mergeCurrent(untimed, cur)
   return [cur]
+}
+
+/** 是否為封閉環（首尾幾乎重合）——暴風半徑圈等，不當路徑。 */
+function isClosedRing(l: [number, number][]): boolean {
+  if (l.length < 3) return false
+  const a = l[0]
+  const b = l[l.length - 1]
+  return Math.abs(a[0] - b[0]) < 0.02 && Math.abs(a[1] - b[1]) < 0.02
+}
+
+/** 把多段線依「端點相接」串成連續折線（還原被切碎的軌跡）。 */
+function stitch(segs: [number, number][][]): [number, number][][] {
+  const near = (a: [number, number], b: [number, number]) =>
+    Math.abs(a[0] - b[0]) < 0.12 && Math.abs(a[1] - b[1]) < 0.12
+  const used = new Array(segs.length).fill(false)
+  const chains: [number, number][][] = []
+  for (let i = 0; i < segs.length; i++) {
+    if (used[i]) continue
+    used[i] = true
+    let chain = segs[i].slice()
+    let extended = true
+    while (extended) {
+      extended = false
+      for (let j = 0; j < segs.length; j++) {
+        if (used[j]) continue
+        const s = segs[j]
+        const head = chain[0]
+        const tail = chain[chain.length - 1]
+        if (near(tail, s[0])) { chain = chain.concat(s.slice(1)); used[j] = true; extended = true }
+        else if (near(tail, s[s.length - 1])) { chain = chain.concat(s.slice().reverse().slice(1)); used[j] = true; extended = true }
+        else if (near(head, s[s.length - 1])) { chain = s.slice().concat(chain.slice(1)); used[j] = true; extended = true }
+        else if (near(head, s[0])) { chain = s.slice().reverse().concat(chain.slice(1)); used[j] = true; extended = true }
+      }
+    }
+    chains.push(chain)
+  }
+  return chains
 }
 
 /** 從任意屬性找出可解析的日期字串（欄名含 date/time）。 */
@@ -184,16 +223,27 @@ function mergeCurrent(pts: TyphoonPoint[], cur: TyphoonPoint): TyphoonPoint[] {
   return out.sort((a, b) => a.hours - b.hours)
 }
 
-/** 單一預報線 → 路徑點：以「較接近現在位置的『端點』」為起點，沿線估 ~72h 展開。 */
+/**
+ * 連續軌跡 → 路徑點：找出離現在位置最近的頂點當「現在(0h)」，取較長的那一臂
+ * 當預報方向（過去段通常較短），沿線估 ~72h 展開。時刻為估算。
+ */
 function lineToTrack(coords: [number, number][], cur: TyphoonPoint): TyphoonPoint[] {
   if (coords.length < 2) return []
-  const d2 = (c: [number, number]) => (c[0] - cur.lat) ** 2 + (c[1] - cur.lng) ** 2
-  // 以「端點」定向（非任意內部頂點）：哪一端離現在位置近，就當起點(0h)。
-  const seq = d2(coords[coords.length - 1]) < d2(coords[0]) ? coords.slice().reverse() : coords.slice()
+  // 離現在位置最近的頂點 = 分界（0h）
+  let ni = 0
+  let nd = Infinity
+  coords.forEach((c, i) => {
+    const d = (c[0] - cur.lat) ** 2 + (c[1] - cur.lng) ** 2
+    if (d < nd) { nd = d; ni = i }
+  })
+  const fwd = coords.slice(ni) // 分界→尾
+  const bwd = coords.slice(0, ni + 1).reverse() // 分界→頭
+  let seg = fwd.length >= bwd.length ? fwd : bwd // 較長的一臂當預報
+  if (seg.length < 2) seg = coords.slice()
   // 降採樣到 ≤7 點
-  const step = Math.max(1, Math.floor(seq.length / 6))
-  const picks = seq.filter((_, i) => i % step === 0)
-  if (picks[picks.length - 1] !== seq[seq.length - 1]) picks.push(seq[seq.length - 1])
+  const step = Math.max(1, Math.floor(seg.length / 6))
+  const picks = seg.filter((_, i) => i % step === 0)
+  if (picks[picks.length - 1] !== seg[seg.length - 1]) picks.push(seg[seg.length - 1])
   const span = 72 // 估算預報時程（h）
   return picks.map((c, i) => {
     const hours = picks.length > 1 ? Math.round((i / (picks.length - 1)) * span) : 0
