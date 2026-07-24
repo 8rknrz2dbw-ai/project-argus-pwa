@@ -69,6 +69,11 @@ body,
   top: calc(0.5rem + env(safe-area-inset-top) + 29.4rem);
   right: calc(0.75rem + env(safe-area-inset-right));
 }
+/* 第 10 格（夜勤光照） */
+.safe-float-top10 {
+  top: calc(0.5rem + env(safe-area-inset-top) + 32.8rem);
+  right: calc(0.75rem + env(safe-area-inset-right));
+}
 /* 自訂點位記號（emoji + 群組色框）＋ 標籤 */
 .poi-marker {
   display: flex;
