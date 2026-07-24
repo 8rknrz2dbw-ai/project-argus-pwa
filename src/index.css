@@ -328,6 +328,21 @@ body,
   white-space: nowrap;
   text-shadow: 0 0 3px #000, 0 0 3px #000;
 }
+/* 漁港記號 + 名稱 */
+.port-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 14px;
+  line-height: 1;
+}
+.port-label {
+  margin-top: 1px;
+  font: 700 9px ui-monospace, monospace;
+  color: #6ee7b7;
+  white-space: nowrap;
+  text-shadow: 0 0 3px #000, 0 0 3px #000;
+}
 /* 台海中線標籤 */
 .median-label {
   font: 700 10px ui-monospace, monospace;
