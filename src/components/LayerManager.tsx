@@ -16,13 +16,17 @@ export function LayerManager() {
   const setShowTerritorial = useTacticalStore((s) => s.setShowTerritorial)
   const showWind = useTacticalStore((s) => s.showWind)
   const setShowWind = useTacticalStore((s) => s.setShowWind)
+  const showWindFarms = useTacticalStore((s) => s.showWindFarms)
+  const setShowWindFarms = useTacticalStore((s) => s.setShowWindFarms)
+  const showMedianLine = useTacticalStore((s) => s.showMedianLine)
+  const setShowMedianLine = useTacticalStore((s) => s.setShowMedianLine)
   const poiHidden = useTacticalStore((s) => s.poiHidden)
   const setPoiHidden = useTacticalStore((s) => s.setPoiHidden)
   const poiPoints = useTacticalStore((s) => s.poiPoints)
   const toolsExpanded = useTacticalStore((s) => s.toolsExpanded)
   const [open, setOpen] = useState(false)
 
-  const anyActive = baseLayer !== 'dark' || showTerritorial || showWind
+  const anyActive = baseLayer !== 'dark' || showTerritorial || showWind || showWindFarms || showMedianLine
 
   return (
     <>
@@ -78,7 +82,19 @@ export function LayerManager() {
                 onToggle={() => setShowTerritorial(!showTerritorial)}
               />
               <LayerCheck
-                label="🌬️ 風場（風向風速）"
+                label="🌀 海上風電場"
+                sub="西部外海離岸風電場示意範圍＋風機（作業區/限制航行/避碰熱點）"
+                checked={showWindFarms}
+                onToggle={() => setShowWindFarms(!showWindFarms)}
+              />
+              <LayerCheck
+                label="🚩 台灣海峽中線（示意）"
+                sub="橫貫海峽的越界態勢監控參考線（非官方劃界）"
+                checked={showMedianLine}
+                onToggle={() => setShowMedianLine(!showMedianLine)}
+              />
+              <LayerCheck
+                label="🌬️ 風向風速（海況）"
                 sub="即時風向風速箭頭（Open-Meteo，免金鑰）；平移地圖自動更新"
                 checked={showWind}
                 onToggle={() => setShowWind(!showWind)}
