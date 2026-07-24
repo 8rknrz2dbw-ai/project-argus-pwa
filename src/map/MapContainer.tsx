@@ -11,7 +11,8 @@ import { EnvAnimLayer } from './EnvAnimLayer'
 import { TyphoonLayer } from './TyphoonLayer'
 import { LocateControl } from './LocateControl'
 import { OfflineControl } from './OfflineControl'
-import { TerritorialLayer, TerritorialToggle } from './TerritorialLayer'
+import { TerritorialLayer } from './TerritorialLayer'
+import { WindLayer } from './WindLayer'
 import { MapFlyTo } from './MapFlyTo'
 import { BrightSpotLayer } from './BrightSpotLayer'
 import { SavedCoordsLayer } from './SavedCoordsLayer'
@@ -67,7 +68,7 @@ export function MapContainer() {
       {map && <LocateControl map={map} />}
       {map && <OfflineControl map={map} />}
       {map && <TerritorialLayer map={map} />}
-      {map && <TerritorialToggle />}
+      {map && <WindLayer map={map} />}
       {map && <MapFlyTo map={map} />}
       {map && <BrightSpotLayer map={map} />}
       {map && <SavedCoordsLayer map={map} />}
