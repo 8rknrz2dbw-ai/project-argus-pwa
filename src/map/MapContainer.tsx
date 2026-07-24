@@ -13,7 +13,7 @@ import { LocateControl } from './LocateControl'
 import { OfflineControl } from './OfflineControl'
 import { TerritorialLayer } from './TerritorialLayer'
 import { WindLayer } from './WindLayer'
-import { WindFarmLayer, MedianLineLayer } from './MaritimeRefLayer'
+import { WindFarmLayer, MedianLineLayer, PortLayer, RainRadarLayer } from './MaritimeRefLayer'
 import { MapFlyTo } from './MapFlyTo'
 import { BrightSpotLayer } from './BrightSpotLayer'
 import { SavedCoordsLayer } from './SavedCoordsLayer'
@@ -72,6 +72,8 @@ export function MapContainer() {
       {map && <WindLayer map={map} />}
       {map && <WindFarmLayer map={map} />}
       {map && <MedianLineLayer map={map} />}
+      {map && <PortLayer map={map} />}
+      {map && <RainRadarLayer map={map} />}
       {map && <MapFlyTo map={map} />}
       {map && <BrightSpotLayer map={map} />}
       {map && <SavedCoordsLayer map={map} />}
