@@ -38,7 +38,9 @@ export function TyphoonLayer({ map }: { map: L.Map }) {
           ? '颱風路徑（示範）：目前查無活躍颱風資料'
           : source === 'cwa'
             ? `颱風路徑（中央氣象署 CWA 官方）：${ty.name}`
-            : `颱風（GDACS 即時）：${ty.name}｜⚠ 預報路徑/時刻為概略估算，官方正確路徑請設定 CWA 金鑰`,
+            : isCwaConfigured()
+              ? `颱風（GDACS 估算）：${ty.name}｜✅ CWA 金鑰已設定，但目前無颱風警報資料；氣象署一發布警報即自動切換官方路徑`
+              : `颱風（GDACS 即時）：${ty.name}｜⚠ 預報為估算，官方正確路徑請設定 CWA 金鑰`,
       )
     }
 
