@@ -138,6 +138,8 @@ interface TacticalState {
 
   // ── 領海基線/鄰接區參考線（跨模式覆蓋層）────────────
   showTerritorial: boolean
+  /** 風場圖層（風向風速箭頭，跨模式常駐）。 */
+  showWind: boolean
 
   // ── 地圖飛行目標（座標查詢用，設定後地圖飛過去再清空）────
   flyToTarget: { lat: number; lng: number; zoom?: number } | null
@@ -206,6 +208,7 @@ interface TacticalState {
   toggleTools: () => void
   setBaseLayer: (id: BaseLayerId) => void
   setShowTerritorial: (v: boolean) => void
+  setShowWind: (v: boolean) => void
   setSeaStateField: (f: 'sst' | 'wave') => void
   setSeaStateRange: (r: { min: number; max: number } | null) => void
   setCwaTide: (t: TideEvent[] | null) => void
@@ -304,6 +307,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   })(),
   toolsExpanded: false,
   showTerritorial: false,
+  showWind: false,
   statusMessage: '軌道預警模式待命中',
 
   setMode: (mode) =>
@@ -426,6 +430,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
     set({ baseLayer: id })
   },
   setShowTerritorial: (v) => set({ showTerritorial: v }),
+  setShowWind: (v) => set({ showWind: v }),
   setSeaStateField: (f) => set({ seaStateField: f }),
   setSeaStateRange: (r) => set({ seaStateRange: r }),
   setCwaTide: (t) => set({ cwaTide: t }),
