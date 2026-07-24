@@ -2,6 +2,7 @@ import { currentPoint } from '../lib/typhoon'
 import { isCwaConfigured } from '../lib/config'
 import { estimateWarnings, coastGuardVerdict } from '../lib/typhoonWarning'
 import { typhoonBrief } from '../lib/typhoonBrief'
+import { interpTyphoonAt } from '../map/TyphoonLayer'
 import { useTacticalStore } from '../store/tacticalStore'
 
 /** 名稱是否為「國際編號/尚未命名」(如 ELEVEN-26、TD、INVEST 91W)。 */
@@ -22,6 +23,8 @@ const VERDICT_STYLE: Record<string, string> = {
 export function TyphoonControls() {
   const active = useTacticalStore((s) => s.activeTyphoon)
   const own = useTacticalStore((s) => s.ownPosition)
+  const tyScrubHours = useTacticalStore((s) => s.tyScrubHours)
+  const setTyScrubHours = useTacticalStore((s) => s.setTyScrubHours)
   const cwa = isCwaConfigured()
 
   // 查詢中（尚未取得任何颱風資料）：顯示載入，不先塞示範。
@@ -42,6 +45,8 @@ export function TyphoonControls() {
   const ty = active
   const cur = currentPoint(ty)
   const future = ty.track.filter((p) => p.hours > 0)
+  const maxHours = future.reduce((m, p) => Math.max(m, p.hours), 0)
+  const scrubInfo = tyScrubHours > 0 ? interpTyphoonAt(ty, tyScrubHours) : null
   const warn = estimateWarnings(ty)
   const cg = coastGuardVerdict(warn)
   // 有 GPS 定位就以「您所在位置」研判方位/距離/侵襲機率，否則以台灣中心。
@@ -130,6 +135,36 @@ export function TyphoonControls() {
               <span className="text-[9px] text-slate-500">{p.galeRadiusKm} km</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* 時間軸拖曳：看「+N 小時」暴風圈預判位置（青色圈沿路徑移動）*/}
+      {maxHours > 0 && (
+        <div className="rounded-lg border border-tactical-cyan/30 bg-tactical-cyan/5 p-2">
+          <div className="mb-1 flex items-center justify-between">
+            <label className="text-[11px] font-semibold text-tactical-cyan">⏱ 拖曳看暴風圈預判位置</label>
+            <span className="font-mono text-[11px] text-tactical-cyan">
+              {tyScrubHours === 0
+                ? '現在'
+                : scrubInfo
+                  ? `+${Math.round(scrubInfo.hours)}h · ${scrubInfo.windKt}kt · 圈${Math.round(scrubInfo.galeRadiusKm)}km`
+                  : `+${tyScrubHours}h`}
+            </span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={maxHours}
+            step={1}
+            value={tyScrubHours}
+            onChange={(e) => setTyScrubHours(Number(e.target.value))}
+            className="w-full accent-cyan-400"
+          />
+          <div className="mt-0.5 flex justify-between font-mono text-[9px] text-slate-500">
+            <span>現在</span>
+            <span className="text-tactical-cyan">拖曳 → 青色圈沿路徑移動</span>
+            <span>+{maxHours}h</span>
+          </div>
         </div>
       )}
 
