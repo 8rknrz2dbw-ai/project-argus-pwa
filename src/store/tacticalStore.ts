@@ -119,6 +119,8 @@ interface TacticalState {
   // ── 颱風 (typhoon) ───────────────────────────────────
   /** 目前顯示的颱風（CWA/GDACS/示範），供控制面板算警報。 */
   activeTyphoon: Typhoon | null
+  /** 颱風時間軸：拖曳看「+N 小時」暴風圈預判位置（0=關）。 */
+  tyScrubHours: number
 
   // ── 環境時間動畫 (envanim) ───────────────────────────
   /** 動畫目前顯示的小時 epoch（0=未載入）。 */
@@ -209,6 +211,7 @@ interface TacticalState {
   setCwaTide: (t: TideEvent[] | null) => void
   setCwaSeaAreas: (s: SeaAreaForecast[] | null) => void
   setActiveTyphoon: (t: Typhoon | null) => void
+  setTyScrubHours: (h: number) => void
   setAnimEpoch: (e: number) => void
   setAnimPlaying: (v: boolean) => void
   setAnimTimes: (t: number[]) => void
@@ -271,6 +274,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   seaStateField: 'sst',
   seaStateRange: null,
   activeTyphoon: null,
+  tyScrubHours: 0,
   cwaTide: null,
   cwaSeaAreas: null,
   animEpoch: 0,
@@ -427,6 +431,7 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setCwaTide: (t) => set({ cwaTide: t }),
   setCwaSeaAreas: (s) => set({ cwaSeaAreas: s }),
   setActiveTyphoon: (t) => set({ activeTyphoon: t }),
+  setTyScrubHours: (h) => set({ tyScrubHours: h }),
   setAnimEpoch: (e) => set({ animEpoch: e }),
   setAnimPlaying: (v) => set({ animPlaying: v }),
   setAnimTimes: (t) => set({ animTimes: t }),

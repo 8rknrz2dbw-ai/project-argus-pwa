@@ -17,7 +17,11 @@ export function TyphoonLayer({ map }: { map: L.Map }) {
   const mode = useTacticalStore((s) => s.mode)
   const setStatus = useTacticalStore((s) => s.setStatus)
   const setActiveTyphoon = useTacticalStore((s) => s.setActiveTyphoon)
+  const activeTyphoon = useTacticalStore((s) => s.activeTyphoon)
+  const tyScrubHours = useTacticalStore((s) => s.tyScrubHours)
+  const setTyScrubHours = useTacticalStore((s) => s.setTyScrubHours)
   const groupRef = useRef<L.LayerGroup | null>(null)
+  const scrubRef = useRef<L.LayerGroup | null>(null)
 
   useEffect(() => {
     if (mode !== 'typhoon') return
@@ -64,12 +68,50 @@ export function TyphoonLayer({ map }: { map: L.Map }) {
     return () => {
       cancelled = true
       setActiveTyphoon(null)
+      setTyScrubHours(0)
       group.clearLayers()
       map.removeLayer(group)
       groupRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
+
+  // ── 時間軸拖曳：畫「+N 小時」暴風圈預判位置（青色圈，隨拖曳移動）──
+  useEffect(() => {
+    const remove = () => {
+      if (scrubRef.current) {
+        scrubRef.current.clearLayers()
+        map.removeLayer(scrubRef.current)
+        scrubRef.current = null
+      }
+    }
+    remove()
+    if (mode !== 'typhoon' || !activeTyphoon || tyScrubHours <= 0) return
+    const s = interpTyphoonAt(activeTyphoon, tyScrubHours)
+    if (!s) return
+    const g = L.layerGroup().addTo(map)
+    scrubRef.current = g
+    // 預判暴風圈（青色，與現在的紅圈區隔）
+    L.circle([s.lat, s.lng], {
+      radius: s.galeRadiusKm * 1000,
+      color: '#22d3ee',
+      weight: 2,
+      dashArray: '5 5',
+      fillColor: '#22d3ee',
+      fillOpacity: 0.08,
+    }).addTo(g)
+    L.marker([s.lat, s.lng], {
+      icon: L.divIcon({
+        className: '',
+        html: `<div class="ty-scrub">+${Math.round(s.hours)}h 預判<br/>近中心風 ${s.windKt} kt</div>`,
+        iconSize: [104, 30],
+        iconAnchor: [52, -6],
+      }),
+      zIndexOffset: 1400,
+    }).addTo(g)
+    return remove
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, activeTyphoon, tyScrubHours])
 
   return null
 }
@@ -107,14 +149,15 @@ function drawRelative(group: L.LayerGroup, ownLat: number, ownLng: number, tyLat
  *  - 在預報路徑上標出「首次達海警/陸警門檻」的位置與時刻，直接看出何時可能發警報。
  */
 function drawWarnThresholds(group: L.LayerGroup, ty: Typhoon) {
-  // 100km ≈ 54 浬，用既有 offsetRing 由基線外偏，得離岸約 100km 的參考線。
-  const seaLine = offsetRing(TAIWAN_BASELINE, 100 / 1.852)
+  // 100km ≈ 54 浬，用既有 offsetRing 由基線外偏，再 Chaikin 平滑成圓潤曲線。
+  const seaLine = chaikinClosed(offsetRing(TAIWAN_BASELINE, 100 / 1.852), 3)
   L.polygon(seaLine, {
     color: '#f59e0b',
     weight: 1.5,
     dashArray: '4 6',
     opacity: 0.75,
     fill: false,
+    lineJoin: 'round',
   })
     .bindPopup(
       '<b style="color:#f59e0b">海上警報門檻線（離岸約 100km）</b><br/>颱風七級暴風圈碰到此線，即達中央氣象署「海上颱風警報」發布時機（約 24h 前）。',
@@ -135,6 +178,49 @@ function drawWarnThresholds(group: L.LayerGroup, ty: Typhoon) {
   }
   if (w.seaPoint) flag(w.seaPoint, '#f59e0b', '達海警門檻')
   if (w.landPoint) flag(w.landPoint, '#f43f5e', '達陸警門檻')
+}
+
+/** Chaikin 角切平滑（封閉環）：把折線的尖角磨圓，看起來更漂亮。 */
+function chaikinClosed(pts: [number, number][], iters = 2): [number, number][] {
+  let p = pts
+  for (let it = 0; it < iters; it++) {
+    const out: [number, number][] = []
+    const n = p.length
+    for (let i = 0; i < n; i++) {
+      const a = p[i]
+      const b = p[(i + 1) % n]
+      out.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25])
+      out.push([a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75])
+    }
+    p = out
+  }
+  return p
+}
+
+/** 沿預報路徑內插「+h 小時」的暴風圈預判位置（位置/暴風半徑/風速皆線性內插）。 */
+export function interpTyphoonAt(
+  ty: Typhoon,
+  h: number,
+): { lat: number; lng: number; galeRadiusKm: number; windKt: number; hours: number } | null {
+  const pts = ty.track.filter((p) => p.hours >= 0).sort((a, b) => a.hours - b.hours)
+  if (!pts.length) return null
+  if (h <= pts[0].hours) return { ...pts[0], hours: pts[0].hours }
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i]
+    const b = pts[i + 1]
+    if (h >= a.hours && h <= b.hours) {
+      const t = (h - a.hours) / ((b.hours - a.hours) || 1)
+      return {
+        lat: a.lat + (b.lat - a.lat) * t,
+        lng: a.lng + (b.lng - a.lng) * t,
+        galeRadiusKm: a.galeRadiusKm + (b.galeRadiusKm - a.galeRadiusKm) * t,
+        windKt: Math.round(a.windKt + (b.windKt - a.windKt) * t),
+        hours: h,
+      }
+    }
+  }
+  const last = pts[pts.length - 1]
+  return { ...last, hours: last.hours }
 }
 
 function dest(lat: number, lng: number, bearingDeg: number, distM: number) {
@@ -164,9 +250,14 @@ function draw(group: L.LayerGroup, ty: Typhoon) {
   }
   const cone = [...left, ...right.reverse()]
   if (cone.length > 2) {
-    L.polygon(cone, { color: '#f59e0b', weight: 1, opacity: 0.5, fillColor: '#f59e0b', fillOpacity: 0.08 }).addTo(
-      group,
-    )
+    L.polygon(chaikinClosed(cone, 2), {
+      color: '#f59e0b',
+      weight: 1,
+      opacity: 0.45,
+      fillColor: '#f59e0b',
+      fillOpacity: 0.07,
+      lineJoin: 'round',
+    }).addTo(group)
   }
 
   // ── 颱風警報門檻線（依 CWA 準則：暴風圈碰到即達發布時機）──────

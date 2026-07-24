@@ -312,6 +312,18 @@ body,
   text-align: center;
   line-height: 16px;
 }
+/* 颱風時間軸拖曳的預判位置標籤 */
+.ty-scrub {
+  font: 700 10px ui-monospace, monospace;
+  color: #a5f3fc;
+  background: rgba(8, 51, 68, 0.92);
+  border: 1.5px solid #22d3ee;
+  border-radius: 8px;
+  text-align: center;
+  line-height: 1.25;
+  padding: 2px 5px;
+  white-space: nowrap;
+}
 /* 颱風警報門檻觸發旗標（達海警/陸警發布時機的路徑點） */
 .warn-flag {
   font: 700 10px ui-monospace, monospace;
