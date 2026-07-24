@@ -343,6 +343,27 @@ body,
   white-space: nowrap;
   text-shadow: 0 0 3px #000, 0 0 3px #000;
 }
+/* 禁/限制水域標籤 */
+.restrict-label {
+  font: 700 10px ui-monospace, monospace;
+  color: #fecaca;
+  background: rgba(69, 10, 10, 0.85);
+  border: 1px solid #f43f5e;
+  border-radius: 8px;
+  text-align: center;
+  padding: 1px 4px;
+  white-space: nowrap;
+}
+/* 暫定執法線標籤 */
+.enforce-label {
+  font: 700 9px ui-monospace, monospace;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid;
+  border-radius: 8px;
+  text-align: center;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
 /* 台海中線標籤 */
 .median-label {
   font: 700 10px ui-monospace, monospace;

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import { useTacticalStore } from '../store/tacticalStore'
-import { WIND_FARMS, MEDIAN_LINE, PORTS } from '../lib/maritimeRef'
+import { WIND_FARMS, MEDIAN_LINE, PORTS, RESTRICTED_ZONES, ENFORCEMENT_LINES } from '../lib/maritimeRef'
 
 /**
  * 海上風電場圖層（跨模式）：由圖層視窗打勾開啟。畫各風場示意範圍圈＋風機標記，
@@ -130,6 +130,97 @@ export function RainRadarLayer({ map }: { map: L.Map }) {
       remove()
     }
   }, [show, map, setStatus])
+
+  return null
+}
+
+/**
+ * 金馬外離島 禁止／限制水域（示意）圖層：處置大陸漁船越界抽砂/捕撈用。
+ * 內圈＝禁止水域（紅實線），外圈＝限制水域（橘虛線）。
+ */
+export function RestrictedZoneLayer({ map }: { map: L.Map }) {
+  const show = useTacticalStore((s) => s.showRestricted)
+  const groupRef = useRef<L.LayerGroup | null>(null)
+
+  useEffect(() => {
+    if (!show) return
+    const g = L.layerGroup().addTo(map)
+    groupRef.current = g
+    for (const z of RESTRICTED_ZONES) {
+      // 限制水域（外緣）
+      L.circle([z.lat, z.lng], {
+        radius: z.limitKm * 1000,
+        color: '#fb923c',
+        weight: 1.5,
+        opacity: 0.75,
+        dashArray: '6 5',
+        fillColor: '#fb923c',
+        fillOpacity: 0.05,
+      })
+        .bindPopup(`<b style="color:#fb923c">${z.name} 限制水域（示意）</b><br/>外緣約 ${z.limitKm} km；大陸船舶進入即屬越界`)
+        .addTo(g)
+      // 禁止水域（近岸）
+      L.circle([z.lat, z.lng], {
+        radius: z.banKm * 1000,
+        color: '#f43f5e',
+        weight: 2,
+        opacity: 0.9,
+        fillColor: '#f43f5e',
+        fillOpacity: 0.1,
+      })
+        .bindPopup(`<b style="color:#f43f5e">${z.name} 禁止水域（示意）</b><br/>近岸約 ${z.banKm} km；最優先驅離/查扣範圍`)
+        .addTo(g)
+      L.marker([z.lat, z.lng], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div class="restrict-label">🚫 ${z.name}</div>`,
+          iconSize: [96, 16],
+          iconAnchor: [48, 8],
+        }),
+      }).addTo(g)
+    }
+    return () => {
+      g.clearLayers()
+      map.removeLayer(g)
+      groupRef.current = null
+    }
+  }, [show, map])
+
+  return null
+}
+
+/**
+ * 暫定執法線／重疊海域（示意）圖層：台日漁業協議外緣、台菲巴士海峽中線。
+ * 供對外漁業執法邊界態勢參考。
+ */
+export function EnforcementLineLayer({ map }: { map: L.Map }) {
+  const show = useTacticalStore((s) => s.showEnforceLine)
+  const groupRef = useRef<L.LayerGroup | null>(null)
+
+  useEffect(() => {
+    if (!show) return
+    const g = L.layerGroup().addTo(map)
+    groupRef.current = g
+    for (const line of ENFORCEMENT_LINES) {
+      L.polyline(line.path, { color: line.color, weight: 2.5, dashArray: '12 7', opacity: 0.85 })
+        .bindPopup(`<b style="color:${line.color}">${line.name}</b><br/><span style="color:#94a3b8;font-size:11px">概略示意，非官方劃界；以海巡署執法海域圖為準</span>`)
+        .addTo(g)
+      const mid = line.path[Math.floor(line.path.length / 2)]
+      L.marker(mid, {
+        icon: L.divIcon({
+          className: '',
+          html: `<div class="enforce-label" style="border-color:${line.color};color:${line.color}">${line.name}</div>`,
+          iconSize: [150, 16],
+          iconAnchor: [75, 8],
+        }),
+      }).addTo(g)
+    }
+    return () => {
+      g.clearLayers()
+      map.removeLayer(g)
+      groupRef.current = null
+    }
+  }, [show, map])
 
   return null
 }

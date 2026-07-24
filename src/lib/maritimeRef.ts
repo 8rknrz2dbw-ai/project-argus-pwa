@@ -66,3 +66,66 @@ export const MEDIAN_LINE: [number, number][] = [
   [23.5, 118.4],
   [22.8, 117.9],
 ]
+
+// ── 金馬外離島 禁止／限制水域（示意）─────────────────────────
+//
+// 依《金門馬祖東沙南沙地區安全及輔導條例》劃設的禁止水域（近岸）與限制水域
+// （外緣），供海巡處置大陸漁船越界抽砂/捕撈態勢參考。這裡以「示意半徑圈」
+// 呈現概略範圍，非精確界線；實際範圍以國防部/海巡署公告航行圖為準。
+
+export interface RestrictedZone {
+  name: string
+  lat: number
+  lng: number
+  /** 禁止水域外緣約略半徑(km)。 */
+  banKm: number
+  /** 限制水域外緣約略半徑(km)。 */
+  limitKm: number
+}
+
+export const RESTRICTED_ZONES: RestrictedZone[] = [
+  { name: '金門（大金門）', lat: 24.436, lng: 118.318, banKm: 4, limitKm: 11 },
+  { name: '烈嶼（小金門）', lat: 24.43, lng: 118.24, banKm: 3, limitKm: 8 },
+  { name: '馬祖 南竿', lat: 26.155, lng: 119.94, banKm: 4, limitKm: 11 },
+  { name: '馬祖 北竿', lat: 26.222, lng: 120.0, banKm: 3, limitKm: 9 },
+  { name: '馬祖 東引', lat: 26.367, lng: 120.492, banKm: 3, limitKm: 9 },
+  { name: '烏坵', lat: 24.99, lng: 119.452, banKm: 3, limitKm: 8 },
+]
+
+// ── 暫定執法線 / 重疊海域（示意）────────────────────────────
+//
+// 供海巡掌握對外漁業執法邊界態勢：台日漁業協議適用海域外緣、台菲重疊海域
+// （巴士海峽）中間線。座標為概略示意，非官方精確劃界，實務以海巡署頒布之
+// 執法海域圖與外交協議為準。
+
+export interface EnforcementLine {
+  name: string
+  color: string
+  path: [number, number][]
+}
+
+export const ENFORCEMENT_LINES: EnforcementLine[] = [
+  {
+    // 台日漁業協議適用海域「暫定執法線」概略外緣（釣魚台－八重山北方海域）
+    name: '台日漁業 暫定執法線（示意）',
+    color: '#fbbf24',
+    path: [
+      [26.7, 122.1],
+      [26.3, 123.0],
+      [25.8, 123.7],
+      [25.2, 124.4],
+      [24.6, 124.6],
+    ],
+  },
+  {
+    // 台菲（巴士海峽）重疊海域概略中間線
+    name: '台菲 巴士海峽 重疊海域中線（示意）',
+    color: '#f472b6',
+    path: [
+      [21.05, 120.3],
+      [20.75, 121.3],
+      [20.55, 122.3],
+      [20.4, 123.3],
+    ],
+  },
+]
