@@ -51,7 +51,10 @@ export async function fetchGdacsTyphoon(): Promise<Typhoon | null> {
     for (const f of tcs) {
       const g = f?.geometry?.coordinates
       if (!Array.isArray(g) || g.length < 2) continue
-      const d = kmFromTaiwan(num(g[1]), num(g[0]))
+      const la = num(g[1])
+      const lo = num(g[0])
+      if (!Number.isFinite(la) || !Number.isFinite(lo)) continue // 防 NaN 座標流入 setView
+      const d = kmFromTaiwan(la, lo)
       if (!best || d < best.d) best = { f, d }
     }
     if (!best) return null
@@ -238,7 +241,12 @@ function lineToTrack(coords: [number, number][], cur: TyphoonPoint): TyphoonPoin
   })
   const fwd = coords.slice(ni) // 分界→尾
   const bwd = coords.slice(0, ni + 1).reverse() // 分界→頭
-  let seg = fwd.length >= bwd.length ? fwd : bwd // 較長的一臂當預報
+  // 預報段通常「延伸最遠」（+72h 距離最大）；以端點離現在位置的距離挑，
+  // 比用頂點數量更穩健（避免把較密的『過去』軌跡誤當預報）。
+  const reach = (arm: [number, number][]) =>
+    arm.length ? (arm[arm.length - 1][0] - cur.lat) ** 2 + (arm[arm.length - 1][1] - cur.lng) ** 2 : -1
+  let seg = reach(fwd) >= reach(bwd) ? fwd : bwd
+  if (seg.length < 2) seg = fwd.length >= bwd.length ? fwd : bwd
   if (seg.length < 2) seg = coords.slice()
   // 降採樣到 ≤7 點
   const step = Math.max(1, Math.floor(seg.length / 6))

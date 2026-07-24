@@ -59,7 +59,8 @@ export function AisLayer({ map }: { map: L.Map }) {
       group.clearLayers()
       map.removeLayer(group)
       groupRef.current = null
-      setVessels([])
+      // 注意：不清空 store 的 vessels——保留最後已知 AIS，供光學亮點掃描做
+      //「無AIS=可疑暗船」比對（見 BrightSpotLayer / store setMode 的說明）。
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
