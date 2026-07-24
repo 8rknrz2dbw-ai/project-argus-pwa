@@ -95,6 +95,30 @@ export function SettingsPanel() {
               onChange={(v) => setCfg({ ...cfg, sentinelInstanceId: v })}
               placeholder="例如 12345678-abcd-..."
             />
+            <details className="mb-3 rounded-lg border border-tactical-cyan/40 bg-tactical-cyan/5 p-2">
+              <summary className="cursor-pointer text-[11px] font-semibold text-tactical-cyan">
+                🛰️ 想在 App 內看到 Copernicus 那種海上衛星照？照這 5 步（免再開帳號）
+              </summary>
+              <div className="mt-2 flex flex-col gap-1.5 text-[10px] leading-relaxed text-slate-300">
+                <p className="text-tactical-green">
+                  你在 Copernicus Browser 看到的海上影像，跟本 App 是<b>同一個來源</b>
+                  （sh.dataspace.copernicus.eu）。你<b>不用再申請新帳號</b>，只差一組「Instance ID」把影像叫進來。
+                </p>
+                <ol className="flex list-decimal flex-col gap-1 pl-4 text-slate-400">
+                  <li>用你現在的 Copernicus 帳號登入 <b className="text-slate-200">Sentinel Hub 儀錶板</b>（Copernicus Browser 左側/右上的「SH Dashboard／Dashboard」連結）。</li>
+                  <li>進到 <b className="text-slate-200">Configuration Utility</b>，按 <b>New configuration</b>（範本選 <i>Python/Web — WMS/OGC</i> 皆可）。</li>
+                  <li>建好後，在該 configuration 的 <b className="text-slate-200">Layers</b> 新增兩個圖層，名稱務必打成：
+                    <br/>• <b className="text-tactical-cyan">TRUE-COLOR-S2L2A</b>（真彩光學，看船/海面）
+                    <br/>• <b className="text-tactical-cyan">SAR-VV</b>（Sentinel-1 雷達，穿雲/夜間看船）</li>
+                  <li>複製該 configuration 的 <b className="text-slate-200">Instance ID</b>（一串 UUID）。</li>
+                  <li>貼到上面「Sentinel Hub Instance ID」欄 → 儲存。回光學模式即可拉日期看「案發當時」的影像。</li>
+                </ol>
+                <p className="text-slate-500">
+                  下方「WMS 位址」保持預設 <span className="font-mono">sh.dataspace.copernicus.eu/ogc/wms</span> 不用改。
+                  影像每次過境才更新（Sentinel-2 約 2–5 天一次），拉日期選有影像的那天最清楚。
+                </p>
+              </div>
+            </details>
             <Field
               label="🛰️ Sentinel WMS 位址"
               hint="預設 CDSE 免費版，一般不用改"
