@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTacticalStore } from '../store/tacticalStore'
 import { POI_ICONS, POI_COLORS } from '../lib/poi'
+import { poiToCsv, csvToPoi } from '../lib/poiCsv'
 import { geocode, type GeoResult } from '../lib/geocode'
 import { elevation } from '../lib/elevation'
 import { parseCoord, fmtDDM } from '../lib/coordParse'
@@ -128,6 +129,52 @@ export function FieldOpsPanel() {
 
   const [expand, setExpand] = useState<string | null>(null)
 
+  // CSV 匯入/匯出（Excel）
+  const fileRef = useRef<HTMLInputElement>(null)
+  const exportCsv = () => {
+    if (points.length === 0) {
+      setStatus('目前沒有點位可匯出')
+      return
+    }
+    const blob = new Blob([poiToCsv(groups, points)], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = '阿爾戈斯-點位.csv'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 4000)
+    setStatus(`已匯出 ${points.length} 個點位（CSV · Excel 可開）`)
+  }
+  const importCsv = async (file: File) => {
+    try {
+      const rows = csvToPoi(await file.text())
+      if (!rows.length) {
+        setStatus('CSV 沒有可匯入的點位（需含 緯度/經度 欄）')
+        return
+      }
+      const nameToId = new Map(groups.map((g) => [g.name, g.id]))
+      let added = 0
+      for (const r of rows) {
+        let gid = nameToId.get(r.group)
+        if (!gid) {
+          gid = addPoiGroup({
+            name: r.group,
+            icon: POI_ICONS[0],
+            color: POI_COLORS[nameToId.size % POI_COLORS.length],
+          })
+          nameToId.set(r.group, gid)
+        }
+        addPoiPoint({ groupId: gid, label: r.label, lat: r.lat, lng: r.lng, note: r.note, elevM: r.elevM })
+        added++
+      }
+      setStatus(`✅ 已從 CSV 匯入 ${added} 個點位`)
+    } catch {
+      setStatus('⚠ CSV 讀取失敗，請確認檔案格式')
+    }
+  }
+
   return (
     <>
       {(toolsExpanded || points.length > 0) && (
@@ -162,6 +209,33 @@ export function FieldOpsPanel() {
               <span>{hidden ? '🙈 目前全部隱藏中（旁人看不到）' : '👁 目前顯示中'}</span>
               <span>{hidden ? '點此顯示' : '點此一鍵隱藏'}</span>
             </button>
+
+            {/* CSV（Excel）匯入/匯出 */}
+            <div className="mb-3 flex items-center gap-2">
+              <button
+                onClick={exportCsv}
+                className="flex-1 rounded-lg border border-tactical-green/50 bg-tactical-green/10 py-1.5 text-[11px] font-bold text-tactical-green active:scale-95"
+              >
+                ⬇ 匯出 CSV（Excel）
+              </button>
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="flex-1 rounded-lg border border-tactical-cyan/50 bg-tactical-cyan/10 py-1.5 text-[11px] font-bold text-tactical-cyan active:scale-95"
+              >
+                ⬆ 匯入 CSV
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) importCsv(f)
+                  e.target.value = ''
+                }}
+              />
+            </div>
 
             {/* 搜尋地址/景點 */}
             <div className="mb-3 rounded-lg border border-tactical-cyan/30 bg-tactical-cyan/5 p-2">

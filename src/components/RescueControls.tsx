@@ -365,33 +365,45 @@ export function RescueControls() {
         </div>
       )}
 
-      {/* 雙向時間軸：一條軸 −72h(來源) … 0(落海點) … +72h(漂流) */}
-      {status === 'done' && drift.length > 0 && (
-        <div>
-          <div className="mb-1 flex items-center justify-between">
-            <label className="text-[11px] font-semibold text-amber-400">⏱ 雙向時間軸</label>
-            <span className="font-mono text-[11px] text-amber-400">
-              {scrubHours === 0
-                ? '落海點（0h）'
-                : `${fmtClock(driftEpoch(incidentTime, Math.abs(scrubHours), scrubHours < 0))}（${scrubHours < 0 ? '−' : '+'}${Math.abs(scrubHours)}h ${scrubHours < 0 ? '來源' : '漂流'}）`}
-            </span>
+      {/* 雙向時間軸：一進搜救就顯示；標記落海點前為停用＋提示 */}
+      {(() => {
+        const ready = status === 'done' && drift.length > 0
+        return (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2">
+            <div className="mb-1 flex items-center justify-between">
+              <label className="text-[11px] font-semibold text-amber-400">⏱ 雙向時間軸</label>
+              <span className="font-mono text-[11px] text-amber-400">
+                {!ready
+                  ? '待標記落海點'
+                  : scrubHours === 0
+                    ? '落海點（0h）'
+                    : `${fmtClock(driftEpoch(incidentTime, Math.abs(scrubHours), scrubHours < 0))}（${scrubHours < 0 ? '−' : '+'}${Math.abs(scrubHours)}h ${scrubHours < 0 ? '來源' : '漂流'}）`}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={-72}
+              max={72}
+              step={1}
+              value={scrubHours}
+              disabled={!ready}
+              onChange={(e) => setScrubHours(Number(e.target.value))}
+              className="w-full accent-amber-400 disabled:opacity-40"
+            />
+            <div className="mt-0.5 flex justify-between font-mono text-[9px] text-slate-500">
+              <span className="text-amber-400">◀ 逆推 −72h</span>
+              <span>落海點 0</span>
+              <span className="text-tactical-alert">順推 +72h ▶</span>
+            </div>
+            {!ready && (
+              <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
+                先在地圖標記落海點（或用上方座標／我的座標），即可拖曳此軸看
+                <b className="text-tactical-alert">順推漂流</b>與<b className="text-amber-400">逆推來源</b>。
+              </p>
+            )}
           </div>
-          <input
-            type="range"
-            min={-72}
-            max={72}
-            step={1}
-            value={scrubHours}
-            onChange={(e) => setScrubHours(Number(e.target.value))}
-            className="w-full accent-amber-400"
-          />
-          <div className="mt-0.5 flex justify-between font-mono text-[9px] text-slate-500">
-            <span className="text-amber-400">◀ 逆推 −72h</span>
-            <span>落海點 0</span>
-            <span className="text-tactical-alert">順推 +72h ▶</span>
-          </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* 免費衛星查詢（以標記點為中心、鎖定回報日期）*/}
       {mob && (
