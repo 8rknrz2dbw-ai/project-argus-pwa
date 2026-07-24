@@ -140,6 +140,10 @@ interface TacticalState {
   showTerritorial: boolean
   /** 風場圖層（風向風速箭頭，跨模式常駐）。 */
   showWind: boolean
+  /** 海上風電場圖層。 */
+  showWindFarms: boolean
+  /** 台灣海峽中線（示意）。 */
+  showMedianLine: boolean
 
   // ── 地圖飛行目標（座標查詢用，設定後地圖飛過去再清空）────
   flyToTarget: { lat: number; lng: number; zoom?: number } | null
@@ -209,6 +213,8 @@ interface TacticalState {
   setBaseLayer: (id: BaseLayerId) => void
   setShowTerritorial: (v: boolean) => void
   setShowWind: (v: boolean) => void
+  setShowWindFarms: (v: boolean) => void
+  setShowMedianLine: (v: boolean) => void
   setSeaStateField: (f: 'sst' | 'wave') => void
   setSeaStateRange: (r: { min: number; max: number } | null) => void
   setCwaTide: (t: TideEvent[] | null) => void
@@ -308,6 +314,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   toolsExpanded: false,
   showTerritorial: false,
   showWind: false,
+  showWindFarms: false,
+  showMedianLine: false,
   statusMessage: '軌道預警模式待命中',
 
   setMode: (mode) =>
@@ -431,6 +439,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   },
   setShowTerritorial: (v) => set({ showTerritorial: v }),
   setShowWind: (v) => set({ showWind: v }),
+  setShowWindFarms: (v) => set({ showWindFarms: v }),
+  setShowMedianLine: (v) => set({ showMedianLine: v }),
   setSeaStateField: (f) => set({ seaStateField: f }),
   setSeaStateRange: (r) => set({ seaStateRange: r }),
   setCwaTide: (t) => set({ cwaTide: t }),
