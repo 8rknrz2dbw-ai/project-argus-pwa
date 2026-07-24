@@ -144,6 +144,10 @@ interface TacticalState {
   showWindFarms: boolean
   /** 台灣海峽中線（示意）。 */
   showMedianLine: boolean
+  /** 主要漁港／避風港。 */
+  showPorts: boolean
+  /** 即時降雨雷達（RainViewer）。 */
+  showRainRadar: boolean
 
   // ── 地圖飛行目標（座標查詢用，設定後地圖飛過去再清空）────
   flyToTarget: { lat: number; lng: number; zoom?: number } | null
@@ -215,6 +219,8 @@ interface TacticalState {
   setShowWind: (v: boolean) => void
   setShowWindFarms: (v: boolean) => void
   setShowMedianLine: (v: boolean) => void
+  setShowPorts: (v: boolean) => void
+  setShowRainRadar: (v: boolean) => void
   setSeaStateField: (f: 'sst' | 'wave') => void
   setSeaStateRange: (r: { min: number; max: number } | null) => void
   setCwaTide: (t: TideEvent[] | null) => void
@@ -316,6 +322,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   showWind: false,
   showWindFarms: false,
   showMedianLine: false,
+  showPorts: false,
+  showRainRadar: false,
   statusMessage: '軌道預警模式待命中',
 
   setMode: (mode) =>
@@ -441,6 +449,8 @@ export const useTacticalStore = create<TacticalState>((set) => ({
   setShowWind: (v) => set({ showWind: v }),
   setShowWindFarms: (v) => set({ showWindFarms: v }),
   setShowMedianLine: (v) => set({ showMedianLine: v }),
+  setShowPorts: (v) => set({ showPorts: v }),
+  setShowRainRadar: (v) => set({ showRainRadar: v }),
   setSeaStateField: (f) => set({ seaStateField: f }),
   setSeaStateRange: (r) => set({ seaStateRange: r }),
   setCwaTide: (t) => set({ cwaTide: t }),

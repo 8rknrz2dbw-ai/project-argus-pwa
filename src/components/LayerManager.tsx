@@ -20,13 +20,24 @@ export function LayerManager() {
   const setShowWindFarms = useTacticalStore((s) => s.setShowWindFarms)
   const showMedianLine = useTacticalStore((s) => s.showMedianLine)
   const setShowMedianLine = useTacticalStore((s) => s.setShowMedianLine)
+  const showPorts = useTacticalStore((s) => s.showPorts)
+  const setShowPorts = useTacticalStore((s) => s.setShowPorts)
+  const showRainRadar = useTacticalStore((s) => s.showRainRadar)
+  const setShowRainRadar = useTacticalStore((s) => s.setShowRainRadar)
   const poiHidden = useTacticalStore((s) => s.poiHidden)
   const setPoiHidden = useTacticalStore((s) => s.setPoiHidden)
   const poiPoints = useTacticalStore((s) => s.poiPoints)
   const toolsExpanded = useTacticalStore((s) => s.toolsExpanded)
   const [open, setOpen] = useState(false)
 
-  const anyActive = baseLayer !== 'dark' || showTerritorial || showWind || showWindFarms || showMedianLine
+  const anyActive =
+    baseLayer !== 'dark' ||
+    showTerritorial ||
+    showWind ||
+    showWindFarms ||
+    showMedianLine ||
+    showPorts ||
+    showRainRadar
 
   return (
     <>
@@ -92,6 +103,18 @@ export function LayerManager() {
                 sub="橫貫海峽的越界態勢監控參考線（非官方劃界）"
                 checked={showMedianLine}
                 onToggle={() => setShowMedianLine(!showMedianLine)}
+              />
+              <LayerCheck
+                label="⚓ 主要漁港／避風港"
+                sub="全台主要漁港/商港（救難後送、就近調度、颱風避風）"
+                checked={showPorts}
+                onToggle={() => setShowPorts(!showPorts)}
+              />
+              <LayerCheck
+                label="🌧️ 即時降雨雷達"
+                sub="全球雷達回波（RainViewer，免金鑰）；出海避雷雨用"
+                checked={showRainRadar}
+                onToggle={() => setShowRainRadar(!showRainRadar)}
               />
               <LayerCheck
                 label="🌬️ 風向風速（海況）"
