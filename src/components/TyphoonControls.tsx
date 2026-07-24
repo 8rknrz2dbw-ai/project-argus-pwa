@@ -90,6 +90,36 @@ export function TyphoonControls() {
         </div>
       </div>
 
+      {/* 時間軸拖曳：一進颱風就在最上方，拖它看「+N 小時」暴風圈預判位置 */}
+      {maxHours > 0 && (
+        <div className="rounded-lg border border-tactical-cyan/40 bg-tactical-cyan/10 p-2">
+          <div className="mb-1 flex items-center justify-between">
+            <label className="text-[11px] font-semibold text-tactical-cyan">⏱ 拖曳看暴風圈預判位置</label>
+            <span className="font-mono text-[11px] text-tactical-cyan">
+              {tyScrubHours === 0
+                ? '現在'
+                : scrubInfo
+                  ? `${fmtDayHour(Date.now() + scrubInfo.hours * 3600000)} · +${Math.round(scrubInfo.hours)}h · ${scrubInfo.windKt}kt`
+                  : `+${tyScrubHours}h`}
+            </span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={maxHours}
+            step={1}
+            value={tyScrubHours}
+            onChange={(e) => setTyScrubHours(Number(e.target.value))}
+            className="w-full accent-cyan-400"
+          />
+          <div className="mt-0.5 flex justify-between font-mono text-[9px] text-slate-500">
+            <span>現在</span>
+            <span className="text-tactical-cyan">拖曳 → 青色圈沿路徑移動</span>
+            <span>+{maxHours}h</span>
+          </div>
+        </div>
+      )}
+
       {/* 預報員解讀（白話摘要）*/}
       <div className={`rounded-lg border p-2 ${threatColor}`}>
         <div className="mb-1 flex items-center gap-1 text-[11px] font-bold">
@@ -137,36 +167,6 @@ export function TyphoonControls() {
               <span className="text-[9px] text-slate-500">{p.galeRadiusKm} km</span>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* 時間軸拖曳：看「+N 小時」暴風圈預判位置（青色圈沿路徑移動）*/}
-      {maxHours > 0 && (
-        <div className="rounded-lg border border-tactical-cyan/30 bg-tactical-cyan/5 p-2">
-          <div className="mb-1 flex items-center justify-between">
-            <label className="text-[11px] font-semibold text-tactical-cyan">⏱ 拖曳看暴風圈預判位置</label>
-            <span className="font-mono text-[11px] text-tactical-cyan">
-              {tyScrubHours === 0
-                ? '現在'
-                : scrubInfo
-                  ? `${fmtDayHour(Date.now() + scrubInfo.hours * 3600000)} · +${Math.round(scrubInfo.hours)}h · ${scrubInfo.windKt}kt`
-                  : `+${tyScrubHours}h`}
-            </span>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={maxHours}
-            step={1}
-            value={tyScrubHours}
-            onChange={(e) => setTyScrubHours(Number(e.target.value))}
-            className="w-full accent-cyan-400"
-          />
-          <div className="mt-0.5 flex justify-between font-mono text-[9px] text-slate-500">
-            <span>現在</span>
-            <span className="text-tactical-cyan">拖曳 → 青色圈沿路徑移動</span>
-            <span>+{maxHours}h</span>
-          </div>
         </div>
       )}
 
