@@ -7,6 +7,20 @@ import { WIND_FARMS, MEDIAN_LINE, PORTS, RESTRICTED_ZONES, ENFORCEMENT_LINES } f
  * 海上風電場圖層（跨模式）：由圖層視窗打勾開啟。畫各風場示意範圍圈＋風機標記，
  * 提醒作業區/限制航行/避碰熱點。
  */
+/** 三葉片風機 SVG（正確的風力發電圖示，非漩渦；避免與颱風符號混淆）。 */
+function turbineSvg(color: string, size = 22): string {
+  return (
+    `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="${color}" ` +
+    `stroke-width="1.7" stroke-linecap="round">` +
+    `<line x1="12" y1="12" x2="12" y2="23"/>` + // 塔身
+    `<line x1="12" y1="12" x2="12" y2="3"/>` + // 葉片（上）
+    `<line x1="12" y1="12" x2="20.5" y2="16.5"/>` + // 葉片（右下）
+    `<line x1="12" y1="12" x2="3.5" y2="16.5"/>` + // 葉片（左下）
+    `<circle cx="12" cy="12" r="1.6" fill="${color}" stroke="none"/>` + // 輪轂
+    `</svg>`
+  )
+}
+
 export function WindFarmLayer({ map }: { map: L.Map }) {
   const show = useTacticalStore((s) => s.showWindFarms)
   const groupRef = useRef<L.LayerGroup | null>(null)
@@ -18,26 +32,48 @@ export function WindFarmLayer({ map }: { map: L.Map }) {
     for (const wf of WIND_FARMS) {
       const built = wf.status === '營運'
       const color = built ? '#38bdf8' : '#a78bfa'
-      L.circle([wf.lat, wf.lng], {
-        radius: wf.radiusKm * 1000,
+      // 方形風場區塊（caution area）——比圓圈更貼近實際離岸風場劃設外觀
+      const dLat = wf.radiusKm / 111
+      const dLng = wf.radiusKm / (111 * Math.cos((wf.lat * Math.PI) / 180))
+      const bounds: L.LatLngBoundsExpression = [
+        [wf.lat - dLat, wf.lng - dLng],
+        [wf.lat + dLat, wf.lng + dLng],
+      ]
+      L.rectangle(bounds, {
         color,
         weight: 1.5,
-        opacity: 0.7,
-        dashArray: '5 4',
+        opacity: 0.75,
+        dashArray: '6 4',
         fillColor: color,
-        fillOpacity: 0.1,
+        fillOpacity: 0.08,
       }).addTo(g)
+      // 區塊內灑幾支風機示意（3×3 稀疏格點，表達「風機陣列」但不宣稱精確位置）
+      for (let i = -1; i <= 1; i++) {
+        for (let j = -1; j <= 1; j++) {
+          if (i === 0 && j === 0) continue
+          L.marker([wf.lat + (dLat * i) / 1.6, wf.lng + (dLng * j) / 1.6], {
+            interactive: false,
+            icon: L.divIcon({
+              className: '',
+              html: `<div style="opacity:.55">${turbineSvg(color, 13)}</div>`,
+              iconSize: [13, 13],
+              iconAnchor: [7, 11],
+            }),
+          }).addTo(g)
+        }
+      }
+      // 中央主風機圖示 + 名稱
       L.marker([wf.lat, wf.lng], {
         icon: L.divIcon({
           className: '',
-          html: `<div class="wf-marker" style="border-color:${color}">🌀<div class="wf-label" style="color:${color}">${wf.name}</div></div>`,
-          iconSize: [30, 30],
-          iconAnchor: [15, 15],
+          html: `<div class="wf-marker">${turbineSvg(color, 24)}<div class="wf-label" style="color:${color}">${wf.name}</div></div>`,
+          iconSize: [24, 34],
+          iconAnchor: [12, 20],
         }),
       })
         .bindPopup(
-          `<b style="color:${color}">🌀 ${wf.name}</b><br/>離岸風電場（${wf.status}）<br/>` +
-            `示意半徑約 ${wf.radiusKm} km<br/><span style="color:#94a3b8;font-size:11px">作業區/限制航行，注意避碰；範圍以官方公告為準</span>`,
+          `<b style="color:${color}">🗼 ${wf.name}</b><br/>離岸風力發電場（${wf.status}）<br/>` +
+            `示意範圍約 ${wf.radiusKm} km<br/><span style="color:#94a3b8;font-size:11px">風機作業區/限制航行，注意避碰；實際範圍以航港局公告為準</span>`,
         )
         .addTo(g)
     }
